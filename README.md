@@ -1,0 +1,165 @@
+# TG LAB — Tienda online
+
+E-commerce de TG LAB (emprendimiento de impresión 3D, Chiloé, Región de Los
+Lagos, Chile). Next.js + TypeScript + Tailwind + PostgreSQL + Prisma.
+
+La planificación completa está en [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md).
+El estado por fases está más abajo.
+
+---
+
+## Requisitos
+
+- **Node.js 22 LTS** (ver `.nvmrc`)
+- **npm 11+** (`npm install -g npm@11`)
+- **PostgreSQL 16 o 17** instalado localmente (para el cluster de desarrollo).
+  En producción se usa un Postgres administrado (Neon, Prisma Postgres, etc.).
+
+## Instalación
+
+```bash
+npm install
+cp .env.example .env        # y completa los valores (ver abajo)
+npm run dev:db:init         # crea y levanta el Postgres local del proyecto (.devdb/)
+npm run db:migrate          # aplica las migraciones
+npm run db:seed             # datos DEMO de desarrollo
+npm run admin:create        # crea el primer usuario del panel (rol "owner")
+npm run dev                 # http://localhost:3000
+```
+
+## Base de datos en desarrollo
+
+El proyecto usa un **cluster PostgreSQL dedicado** en `.devdb/` (ignorado por
+git, autenticación `trust` solo en `127.0.0.1:5433`, sin contraseña). No
+requiere Docker ni permisos de administrador.
+
+| Comando                 | Acción                                    |
+| ----------------------- | ----------------------------------------- |
+| `npm run dev:db:init`   | crea el cluster + bases `tglab` / `tglab_shadow` y lo inicia |
+| `npm run dev:db:start`  | inicia el servidor                        |
+| `npm run dev:db:stop`   | detiene el servidor                       |
+| `npm run dev:db:status` | estado                                    |
+
+Si prefieres otro Postgres (uno ya instalado, Docker, Neon…), solo cambia
+`DATABASE_URL` y `SHADOW_DATABASE_URL` en `.env`.
+
+## Migraciones y Prisma
+
+```bash
+npm run db:migrate           # crear/aplicar migración en desarrollo
+npm run db:migrate:deploy    # aplicar migraciones en producción
+npm run db:generate          # regenerar el cliente (src/generated/prisma)
+npm run db:studio            # explorar la BD
+npm run db:reset             # ⚠️ recrea la BD y re-siembra (solo desarrollo)
+```
+
+> Prisma 7 genera el cliente en `src/generated/prisma/` (no versionado) y exige
+> un _driver adapter_. `src/server/db.ts` elige automáticamente entre
+> `@prisma/adapter-pg` (URLs `postgres://`) y Prisma Accelerate / Prisma
+> Postgres (URLs `prisma+postgres://`).
+
+## Scripts
+
+| Comando                 | Descripción                                        |
+| ----------------------- | ------------------------------------------------- |
+| `npm run dev`           | servidor de desarrollo                             |
+| `npm run build`         | build de producción                               |
+| `npm run start`         | servir el build                                    |
+| `npm run lint`          | ESLint                                             |
+| `npm run typecheck`     | `tsc --noEmit`                                     |
+| `npm run test`          | pruebas unitarias (Vitest)                         |
+| `npm run test:e2e`      | pruebas end-to-end (Playwright)                    |
+| `npm run format`        | Prettier                                           |
+| `npm run check`         | lint + typecheck + test + build (todo junto)      |
+| `npm run admin:create`  | crear/actualizar usuario del panel                 |
+
+## Variables de entorno
+
+Todas están documentadas en [`.env.example`](.env.example). Resumen:
+
+| Grupo            | Variables clave                                                             | ¿Obligatoria?                         |
+| ---------------- | -------------------------------------------------------------------------- | ------------------------------------- |
+| App              | `NEXT_PUBLIC_SITE_URL`, `APP_ENV`                                          | sí                                    |
+| Base de datos    | `DATABASE_URL`, `SHADOW_DATABASE_URL`                                      | sí                                    |
+| Autenticación    | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`                                    | sí                                    |
+| Almacenamiento   | `STORAGE_DRIVER`, `S3_*`                                                   | no (por defecto local en desarrollo)  |
+| Pagos            | `MERCADOPAGO_*`, `PAYMENTS_BANK_TRANSFER_ENABLED`, `TRANSBANK_*`           | no (sin claves, el método no aparece) |
+| Email            | `RESEND_API_KEY`, `EMAIL_FROM`                                            | no (sin clave, los emails van a consola) |
+| Analítica        | `NEXT_PUBLIC_GA4_ID`, `NEXT_PUBLIC_META_PIXEL_ID`                         | no                                    |
+| Monitoreo        | `SENTRY_DSN`                                                              | no                                    |
+
+**Nunca** se suben secretos al repositorio. Solo `.env.example`.
+
+## Panel de administración
+
+- `/admin` — requiere sesión de staff.
+- El primer usuario se crea con `npm run admin:create` (rol `owner`
+  automáticamente). No existen contraseñas por defecto.
+- Modo no interactivo (CI / bootstrap):
+  `ADMIN_EMAIL=... ADMIN_PASSWORD=... npm run admin:create`.
+
+## Pagos
+
+La arquitectura de pagos está preparada (interfaz `PaymentProvider`) pero **aún
+no hay una pasarela conectada**. Mientras `MERCADOPAGO_ACCESS_TOKEN` esté vacío,
+Mercado Pago no aparece en el checkout y **no se simula ningún pago**.
+Transferencia bancaria manual queda como método real (se implementa en Fase 8).
+
+## Almacenamiento de archivos
+
+`STORAGE_DRIVER=local` guarda las subidas en `public/uploads/` (solo desarrollo).
+En producción se usa `STORAGE_DRIVER=s3` con Cloudflare R2 (S3-compatible). La
+implementación llega en la Fase 3.
+
+## Testing
+
+- **Unitarias** (Vitest): `tests/unit/` y `*.test.ts` junto al código.
+- **E2E** (Playwright): `tests/e2e/` — flujo crítico
+  producto → variante → carrito → checkout → pago → pedido → stock (Fases 5–8).
+
+## Deploy
+
+Pendiente (Fase 15). Objetivo: Vercel + Postgres administrado + Cloudflare R2.
+Ver `docs/ARQUITECTURA.md` §16.
+
+## Backups
+
+Pendiente (Fase 15). Estrategia definida en `docs/ARQUITECTURA.md` §17.
+
+---
+
+## Estado por fases
+
+| Fase                                    | Estado         |
+| --------------------------------------- | -------------- |
+| **F0 — Setup del proyecto**             | ✅ completada   |
+| F1 — Base de datos (schema + seed)      | ✅ base lista   |
+| F2 — Auth admin + shell                 | ✅ base lista   |
+| F3 — Catálogo admin (productos simples) | ⏳ pendiente    |
+| F4 — Variantes + stock                  | ⏳ pendiente    |
+| F5 — Storefront catálogo                | 🚧 esqueleto   |
+| F6 — Carrito                            | ⏳ pendiente    |
+| F7 — Checkout + despachos               | ⏳ pendiente    |
+| F8 — Pagos                              | ⏳ pendiente    |
+| F9 — Pedidos + seguimiento + emails     | ⏳ pendiente    |
+| F10 — Cupones                           | ⏳ pendiente    |
+| F11 — Personalizados                    | ⏳ pendiente    |
+| F12 — Cuentas de cliente                | ⏳ pendiente    |
+| F13 — SEO + analítica + legales         | 🚧 parcial     |
+| F14 — Hardening + testing + performance | ⏳ pendiente    |
+| F15 — Deploy + backups + boleta + docs  | ⏳ pendiente    |
+
+### Desviaciones respecto a `docs/ARQUITECTURA.md`
+
+Decisiones tomadas durante la Fase 0 (todas dentro de "usar versiones estables y
+actuales"):
+
+- **Next.js 16** (no 15): es la versión estable actual. La convención
+  `middleware` se renombró a `proxy` (`src/proxy.ts`).
+- **npm** (no pnpm): `corepack` no pudo activarse en este equipo (permisos).
+  Todo el flujo funciona con npm 11.
+- **Prisma 7**: cliente generado en `src/generated/prisma/`, requiere driver
+  adapter (`@prisma/adapter-pg`).
+- **PostgreSQL local dedicado** en `.devdb/` en vez de Docker (no disponible) o
+  `prisma dev` (inestable bajo carga concurrente).
+- **Better Auth** con control de acceso por roles `owner` / `staff`.

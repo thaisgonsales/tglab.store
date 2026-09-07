@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+/*
+  TG LAB — tokens de diseño.
+  La marca (color primario, etc.) se inyecta en runtime desde la configuración
+  de la tienda como variables CSS en <html> (ver layout.tsx). Aquí van los
+  valores por defecto para que la app funcione sin BD.
+*/
+
+@theme {
+  --font-sans:
+    var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, sans-serif;
+  --font-mono:
+    var(--font-mono-face), ui-monospace, "SFMono-Regular", "Menlo", monospace;
+
+  --color-brand: var(--tglab-brand, #0e7c86);
+  --color-brand-fg: var(--tglab-brand-fg, #ffffff);
+  --color-accent: var(--tglab-accent, #e0a955);
+
+  --radius-card: 0.75rem;
+}
+
+:root {
+  --background: #f7f8fa;
+  --surface: #ffffff;
+  --surface-muted: #eef1f4;
+  --foreground: #16191f;
+  --foreground-muted: #5b6470;
+  --border: #e2e6eb;
+  --ring: #0e7c86;
+
+  --tglab-brand: #0e7c86;
+  --tglab-brand-fg: #ffffff;
+  --tglab-accent: #e0a955;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f131a;
+    --surface: #161c25;
+    --surface-muted: #1d2530;
+    --foreground: #e7eaef;
+    --foreground-muted: #93a0af;
+    --border: #28313d;
+    --ring: #45d6c5;
+
+    --tglab-brand: #45d6c5;
+    --tglab-brand-fg: #06231f;
+
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Foco visible y consistente en toda la app. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}

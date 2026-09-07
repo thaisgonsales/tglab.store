@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800" role="img" aria-label="Imagen de producto pendiente">
+  <rect width="800" height="800" fill="#eef1f4"/>
+  <g fill="none" stroke="#c9d1da" stroke-width="6">
+    <rect x="220" y="250" width="360" height="300" rx="16"/>
+    <path d="M220 470l90-90 70 70 120-120 80 80"/>
+  </g>
+  <circle cx="330" cy="330" r="26" fill="#c9d1da"/>
+  <text x="400" y="620" font-family="system-ui, sans-serif" font-size="30" fill="#8a94a1" text-anchor="middle">TG LAB</text>
+</svg>
