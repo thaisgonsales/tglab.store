@@ -100,10 +100,29 @@ Todas están documentadas en [`.env.example`](.env.example). Resumen:
 
 ## Pagos
 
-La arquitectura de pagos está preparada (interfaz `PaymentProvider`) pero **aún
-no hay una pasarela conectada**. Mientras `MERCADOPAGO_ACCESS_TOKEN` esté vacío,
-Mercado Pago no aparece en el checkout y **no se simula ningún pago**.
-Transferencia bancaria manual queda como método real (se implementa en Fase 8).
+**Mercado Pago (Checkout Pro)** — integración completa (crear preferencia,
+redirección, webhook con validación de firma, verificación de monto contra la
+BD, idempotencia, descuento de stock al aprobarse). Está **inactiva hasta
+cargar las credenciales**: mientras `MERCADOPAGO_ACCESS_TOKEN` /
+`MERCADOPAGO_PUBLIC_KEY` estén vacíos el método no aparece en el checkout y
+**no se simula ningún pago**.
+
+Para activarla (sandbox):
+
+1. Sigue los pasos del bloque "Mercado Pago" en `.env.example` para obtener
+   `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_PUBLIC_KEY` (TEST-...) y
+   `MERCADOPAGO_WEBHOOK_SECRET`, y déjalos en `.env`.
+2. Para que MP alcance el webhook en local, expón el puerto con un túnel
+   (p. ej. `ngrok http 3000`) y usa esa URL pública en `NEXT_PUBLIC_SITE_URL`
+   y en la config de webhooks de MP.
+3. Prueba con las [tarjetas de test de Mercado Pago](https://www.mercadopago.cl/developers/es/docs/checkout-pro/additional-content/your-integrations/test/cards).
+
+**Transferencia bancaria** — método real, sin credenciales: el cliente ve los
+datos (configurados en `/admin/configuracion`) y el equipo confirma el pago
+desde `/admin/pedidos` (ahí se descuenta el stock).
+
+En ambos casos: el stock se **reserva** al crear el pedido y solo se
+**descuenta** al confirmarse el pago. Nunca se almacenan datos de tarjeta.
 
 ## Almacenamiento de archivos
 

@@ -8,6 +8,8 @@ import { ActionError, staffAction } from "@/server/auth/action-guard";
 import type { ActionResult } from "@/server/auth/action-guard";
 import { db } from "@/server/db";
 import { consumeReservations } from "@/server/services/inventory-service";
+import { MercadoPagoProvider } from "@/server/payments/mercadopago";
+import { applyProviderPayment } from "@/server/payments/payment-service";
 import { getProvider } from "@/server/payments/registry";
 import type { StartPaymentResult } from "@/server/payments/types";
 
@@ -84,6 +86,43 @@ export async function startPayment(
     console.error("[startPayment]", err);
     return { ok: false, error: "No se pudo iniciar el pago." };
   }
+}
+
+const syncSchema = z.object({
+  orderNumber: z.string().max(20),
+  paymentId: z.string().max(40).optional(),
+});
+
+/**
+ * Al volver del checkout de Mercado Pago consultamos el pago en la API de MP
+ * (no confiamos en los parámetros de la URL) y aplicamos el resultado.
+ * Idempotente: si el webhook ya lo procesó, no hace nada.
+ */
+export async function syncMercadoPagoReturn(
+  input: z.infer<typeof syncSchema>,
+): Promise<ActionResult<{ paymentStatus: string }>> {
+  const parsed = syncSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Datos inválidos." };
+
+  const provider = new MercadoPagoProvider();
+  if (!provider.isConfigured() || !parsed.data.paymentId) {
+    const order = await db.order.findUnique({
+      where: { number: parsed.data.orderNumber.toUpperCase().trim() },
+      select: { paymentStatus: true },
+    });
+    return {
+      ok: true,
+      data: { paymentStatus: order?.paymentStatus ?? "PENDING" },
+    };
+  }
+
+  const result = await provider.fetchPayment(parsed.data.paymentId);
+  if (!result || result.orderNumber !== parsed.data.orderNumber) {
+    return { ok: true, data: { paymentStatus: "PENDING" } };
+  }
+  const applied = await applyProviderPayment(result);
+  revalidatePath(`/checkout/pago/${parsed.data.orderNumber}`);
+  return { ok: true, data: { paymentStatus: applied.orderPaymentStatus } };
 }
 
 const confirmSchema = z.object({

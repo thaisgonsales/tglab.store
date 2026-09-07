@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { MercadoPagoReturn } from "@/components/store/mercadopago-return";
 import { PaymentMethods } from "@/components/store/payment-methods";
 import { formatCLP } from "@/lib/money";
 import { formatDateTime } from "@/lib/datetime";
@@ -16,12 +17,17 @@ export const metadata: Metadata = {
 
 export default async function PaymentPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ number: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { number } = await params;
+  const sp = await searchParams;
   const order = await getOrderByNumber(number);
   if (!order) notFound();
+
+  const fromMercadoPago = sp.mp === "1";
 
   const [commerce] = await Promise.all([getSettingsGroup("commerce")]);
   const methods = availablePaymentMethods();
@@ -35,6 +41,13 @@ export default async function PaymentPage({
         <h1 className="text-2xl font-semibold tracking-tight">
           {order.number}
         </h1>
+
+        {fromMercadoPago && order.paymentStatus !== "PAID" && (
+          <MercadoPagoReturn
+            orderNumber={order.number}
+            paymentId={sp.payment_id ?? sp["data.id"]}
+          />
+        )}
 
         <dl className="mt-4 space-y-1 text-sm">
           <div className="flex justify-between">

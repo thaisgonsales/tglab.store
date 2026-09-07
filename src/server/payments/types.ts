@@ -14,13 +14,6 @@ export type StartPaymentResult =
   | { kind: "instructions"; providerReference: string }
   | { kind: "unavailable"; reason: string };
 
-export type WebhookEvent = {
-  providerReference: string;
-  status: "PAID" | "PENDING" | "REJECTED" | "CANCELLED" | "REFUNDED";
-  amountPaid: number | null;
-  raw: unknown;
-};
-
 export interface PaymentProvider {
   readonly key: PaymentProviderKey;
   readonly label: string;
@@ -34,6 +27,6 @@ export interface PaymentProvider {
     grandTotal: number;
     email: string;
   }): Promise<StartPaymentResult>;
-  /** Procesa una notificación del proveedor (webhook). Fase 8. */
-  parseWebhook?(req: Request): Promise<WebhookEvent | null>;
+  // Cada proveedor con webhook expone su propio parser/handler en su route
+  // (`/api/webhooks/<proveedor>`), no en esta interfaz común.
 }
