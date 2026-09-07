@@ -26,12 +26,12 @@
   Neutros con leve sesgo cálido para que combinen con el rosado.
 */
 :root {
-  --background: #faf6ef;
-  --surface: #fffefb;
-  --surface-muted: #f4ede0;
+  --background: #f6efdf;
+  --surface: #fffdf8;
+  --surface-muted: #efe6d1;
   --foreground: #3a2b28;
   --foreground-muted: #8b756b;
-  --border: #ece2d2;
+  --border: #e7dcc4;
 
   /* La marca puede sobreescribirse desde /admin (layout.tsx inyecta
      --tglab-brand-light/-dark y --tglab-accent-light/-dark). */
