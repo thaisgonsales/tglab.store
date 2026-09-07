@@ -59,7 +59,18 @@ export function CheckoutForm({
 
   useEffect(() => {
     idempotencyKey.current = getIdempotencyKey();
-  }, []);
+    void import("@/lib/analytics").then((m) =>
+      m.trackBeginCheckout(
+        initialQuote.subtotal,
+        initialQuote.lines.map((l) => ({
+          id: l.productId ?? l.variantId,
+          name: l.productName,
+          price: l.unitPrice,
+          quantity: l.quantity,
+        })),
+      ),
+    );
+  }, [initialQuote]);
 
   const {
     register,

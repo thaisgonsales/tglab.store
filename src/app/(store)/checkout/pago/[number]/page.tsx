@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { MercadoPagoReturn } from "@/components/store/mercadopago-return";
 import { PaymentMethods } from "@/components/store/payment-methods";
+import { PurchaseTracker } from "@/components/store/purchase-tracker";
 import { formatCLP } from "@/lib/money";
 import { formatDateTime } from "@/lib/datetime";
 import { availablePaymentMethods } from "@/server/payments/registry";
@@ -36,6 +37,19 @@ export default async function PaymentPage({
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
+      {order.paymentStatus === "PAID" && (
+        <PurchaseTracker
+          number={order.number}
+          value={order.grandTotal}
+          shipping={order.shippingTotal}
+          items={order.items.map((it) => ({
+            id: it.productId ?? it.id,
+            name: it.productName,
+            price: it.unitPrice,
+            quantity: it.quantity,
+          }))}
+        />
+      )}
       <div className="rounded-card border-border bg-surface border p-6">
         <p className="text-foreground-muted text-sm">Pedido</p>
         <h1 className="text-2xl font-semibold tracking-tight">

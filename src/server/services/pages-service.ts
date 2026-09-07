@@ -59,6 +59,57 @@ const DEFAULTS: Record<string, { title: string; body: string[] }> = {
   },
 };
 
+export type AdminInfoPage = {
+  slug: string;
+  title: string;
+  body: string[];
+  isPublished: boolean;
+  seoTitle: string;
+  seoDescription: string;
+  exists: boolean;
+};
+
+/** Contenido tal como está guardado (incluye borradores) para el editor de admin. */
+export async function getInfoPageForAdmin(
+  slug: string,
+): Promise<AdminInfoPage> {
+  const fallback = DEFAULTS[slug];
+
+  let row = null;
+  try {
+    row = await db.page.findUnique({ where: { slug } });
+  } catch {
+    row = null;
+  }
+
+  if (row) {
+    const body = Array.isArray(row.content)
+      ? (row.content as unknown[]).map(String)
+      : typeof row.content === "string"
+        ? [row.content]
+        : (fallback?.body ?? []);
+    return {
+      slug,
+      title: row.title,
+      body,
+      isPublished: row.isPublished,
+      seoTitle: row.seoTitle ?? "",
+      seoDescription: row.seoDescription ?? "",
+      exists: true,
+    };
+  }
+
+  return {
+    slug,
+    title: fallback?.title ?? slug,
+    body: fallback?.body ?? [],
+    isPublished: true,
+    seoTitle: "",
+    seoDescription: "",
+    exists: false,
+  };
+}
+
 export const getInfoPage = cache(
   async (slug: string): Promise<InfoPageContent | null> => {
     const fallback = DEFAULTS[slug];

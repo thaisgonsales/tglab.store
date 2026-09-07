@@ -4,11 +4,12 @@ import { Loader2, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { trackRemoveFromCart, trackViewCart } from "@/lib/analytics";
 import { formatCLP } from "@/lib/money";
 import type { CartLine } from "@/server/services/cart-service";
 import {
@@ -22,6 +23,23 @@ export function CartLines({ lines }: { lines: CartLine[] }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [isClearing, startClear] = useTransition();
 
+  const viewedRef = useRef(false);
+  useEffect(() => {
+    if (viewedRef.current || lines.length === 0) return;
+    viewedRef.current = true;
+    const value = lines.reduce((acc, l) => acc + l.lineTotal, 0);
+    trackViewCart(
+      value,
+      lines.map((l) => ({
+        id: l.productId ?? l.variantId,
+        name: l.productName,
+        price: l.unitPrice,
+        quantity: l.quantity,
+        variant: l.variantLabel,
+      })),
+    );
+  }, [lines]);
+
   async function setQty(line: CartLine, quantity: number) {
     setPendingId(line.id);
     const result = await updateCartLine({ lineId: line.id, quantity });
@@ -31,11 +49,21 @@ export function CartLines({ lines }: { lines: CartLine[] }) {
   }
 
   async function remove(id: string) {
+    const line = lines.find((l) => l.id === id);
     setPendingId(id);
     const result = await removeCartLine(id);
     setPendingId(null);
-    if (result.ok) toast.success("Producto quitado");
-    else toast.error(result.error);
+    if (result.ok) {
+      toast.success("Producto quitado");
+      if (line) {
+        trackRemoveFromCart({
+          id: line.productId ?? line.variantId,
+          name: line.productName,
+          price: line.unitPrice,
+          quantity: line.quantity,
+        });
+      }
+    } else toast.error(result.error);
     router.refresh();
   }
 

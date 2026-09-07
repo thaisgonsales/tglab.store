@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 
 import "./globals.css";
 
+import { Analytics } from "@/components/analytics";
 import { Providers } from "@/components/providers";
 import { publicEnv } from "@/lib/env";
 import { brandCssVars } from "@/lib/brand-style";
@@ -35,7 +36,9 @@ export async function generateMetadata(): Promise<Metadata> {
       type: "website",
       locale: "es_CL",
       siteName: brand.storeName,
-      images: brand.ogImageUrl ? [{ url: brand.ogImageUrl }] : undefined,
+      images: [
+        { url: brand.ogImageUrl || "/api/og", width: 1200, height: 630 },
+      ],
     },
     robots: { index: true, follow: true },
   };
@@ -43,8 +46,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f8fa" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f131a" },
+    { media: "(prefers-color-scheme: light)", color: "#f6efdf" },
+    { media: "(prefers-color-scheme: dark)", color: "#211a19" },
   ],
 };
 
@@ -59,6 +62,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );

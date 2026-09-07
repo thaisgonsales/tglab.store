@@ -2,13 +2,14 @@
 
 import { Check, Loader2, ShoppingBag } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { trackAddToCart, trackViewItem } from "@/lib/analytics";
 import { discountPercent, formatCLP } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import {
@@ -30,12 +31,16 @@ export type CustomFieldDef = {
 };
 
 export function ProductPurchase({
+  productId,
+  productName,
   attributes,
   variants,
   customFields,
   lowStockThreshold,
   lastUnitsThreshold,
 }: {
+  productId: string;
+  productName: string;
   attributes: SelectableAttribute[];
   variants: SelectableVariant[];
   customFields: CustomFieldDef[];
@@ -60,6 +65,11 @@ export function ProductPurchase({
     () => resolveVariant(variants, selection, attributes),
     [variants, selection, attributes],
   );
+
+  useEffect(() => {
+    const from = Math.min(...variants.map((v) => v.price));
+    trackViewItem({ id: productId, name: productName, price: from });
+  }, [productId, productName, variants]);
 
   function select(attributeId: string, valueId: string) {
     setSelection((prev) => ({ ...prev, [attributeId]: valueId }));
@@ -93,6 +103,12 @@ export function ProductPurchase({
     if (result.ok) {
       setAdded(true);
       toast.success("Agregado al carrito");
+      trackAddToCart({
+        id: productId,
+        name: productName,
+        price: variant.price,
+        quantity,
+      });
       router.refresh();
     } else {
       toast.error(result.error);

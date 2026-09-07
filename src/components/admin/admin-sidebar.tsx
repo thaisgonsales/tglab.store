@@ -10,6 +10,7 @@ import {
   Ticket,
   Truck,
   Sparkles,
+  FileText,
   Settings,
 } from "lucide-react";
 import Link from "next/link";
@@ -27,6 +28,7 @@ const NAV = [
   { label: "Cupones", href: "/admin/cupones", icon: Ticket },
   { label: "Despachos", href: "/admin/despachos", icon: Truck },
   { label: "Personalizados", href: "/admin/personalizados", icon: Sparkles },
+  { label: "Páginas", href: "/admin/paginas", icon: FileText },
   { label: "Configuración", href: "/admin/configuracion", icon: Settings },
 ];
 

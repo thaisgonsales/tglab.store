@@ -496,28 +496,28 @@ Una fase está "lista" solo si está **implementada, probada y compila** — no 
 [~] Base de datos           (schema completo + migraciones + seed DEMO; falta lógica de dominio)
 [~] Autenticación admin     (Better Auth, roles owner/staff, login funcional, proxy de guarda; falta 2FA UI y rate-limit)
 [~] Administración          (shell + dashboard con métricas reales + navegación; secciones son placeholders)
-[ ] Home
-[ ] Categorías
-[ ] Catálogo
-[ ] Productos
-[ ] Multimedia
-[ ] Variaciones
-[ ] Stock
-[ ] Carrito
-[ ] Checkout
-[ ] Despachos
-[ ] Pagos
-[ ] Pedidos
-[ ] Seguimiento
-[ ] Personalizados
-[ ] Clientes
-[ ] Cupones
-[ ] Emails
-[ ] SEO
-[ ] Analítica
-[ ] Páginas legales
-[ ] Seguridad
-[ ] Testing
+[x] Home
+[x] Categorías
+[x] Catálogo
+[x] Productos
+[x] Multimedia
+[x] Variaciones
+[x] Stock
+[x] Carrito
+[x] Checkout
+[x] Despachos
+[~] Pagos                    (MP + transferencia: código completo; MP inactivo hasta cargar credenciales)
+[x] Pedidos
+[x] Seguimiento
+[x] Personalizados
+[ ] Clientes                 (F12, opcional)
+[x] Cupones
+[x] Emails
+[x] SEO                      (metadata, sitemap, robots, canonical, JSON-LD Product/Breadcrumb/Organization/WebSite, OG dinámico /api/og)
+[x] Analítica                (GA4 + Meta Pixel opcionales, eventos e-commerce, purchase deduplicado)
+[x] Páginas legales          (editables desde /admin/paginas; legales con [PLACEHOLDER] hasta datos reales)
+[~] Seguridad                (rate-limit en memoria, validación de uploads, honeypot; falta auditoría F14)
+[~] Testing                  (31 unit + 19 integración + 10 e2e; falta ampliar cobertura F14)
 [ ] Optimización
 [ ] Deploy
 [ ] Documentación

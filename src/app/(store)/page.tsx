@@ -1,8 +1,10 @@
 import { ArrowRight, Package, Sparkles, Truck } from "lucide-react";
 import Link from "next/link";
 
+import { JsonLd } from "@/components/seo/json-ld";
 import { ProductCard } from "@/components/store/product-card";
 import { Button } from "@/components/ui/button";
+import { publicEnv } from "@/lib/env";
 import {
   getBestSellers,
   listPublishedProducts,
@@ -11,7 +13,52 @@ import {
 import { getAllSettings } from "@/server/services/settings-service";
 
 export default async function HomePage() {
-  const { home, contact } = await getAllSettings();
+  const { home, contact, brand } = await getAllSettings();
+
+  const siteUrl = publicEnv.siteUrl;
+  const sameAs = [
+    contact.instagram &&
+      `https://instagram.com/${contact.instagram.replace(/^@/, "")}`,
+    contact.facebook &&
+      (contact.facebook.startsWith("http")
+        ? contact.facebook
+        : `https://facebook.com/${contact.facebook}`),
+  ].filter((v): v is string => Boolean(v));
+
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: brand.storeName,
+    description: brand.tagline,
+    url: siteUrl,
+    ...(brand.logoUrl ? { logo: `${siteUrl}${brand.logoUrl}` } : {}),
+    ...(sameAs.length > 0 ? { sameAs } : {}),
+    ...(contact.email || contact.whatsapp
+      ? {
+          contactPoint: {
+            "@type": "ContactPoint",
+            contactType: "customer support",
+            ...(contact.email ? { email: contact.email } : {}),
+            ...(contact.whatsapp ? { telephone: `+${contact.whatsapp}` } : {}),
+            areaServed: "CL",
+            availableLanguage: "es",
+          },
+        }
+      : {}),
+  };
+
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: brand.storeName,
+    url: siteUrl,
+    inLanguage: "es-CL",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${siteUrl}/productos?q={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  };
   const [featured, latest, bestSellers, offersResult] = await Promise.all([
     listPublishedProducts({ featured: true, take: 8 }),
     listPublishedProducts({ take: 8 }),
@@ -29,6 +76,9 @@ export default async function HomePage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4">
+      <JsonLd data={organizationJsonLd} />
+      <JsonLd data={websiteJsonLd} />
+
       {/* HERO */}
       <section className="grid gap-6 py-12 md:grid-cols-2 md:items-center md:py-20">
         <div>

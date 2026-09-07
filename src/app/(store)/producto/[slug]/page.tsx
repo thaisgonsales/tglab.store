@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { JsonLd } from "@/components/seo/json-ld";
 import { ProductCard } from "@/components/store/product-card";
 import { ProductGallery } from "@/components/store/product-gallery";
 import { ProductPurchase } from "@/components/store/product-purchase";
@@ -30,6 +31,13 @@ export async function generateMetadata({
   const product = await getPublishedProductBySlug(slug);
   if (!product) return { title: "Producto no encontrado" };
   const image = product.media.find((m) => m.type === "IMAGE")?.url;
+  const ogImage =
+    image ??
+    `/api/og?title=${encodeURIComponent(product.name)}${
+      product.shortDescription
+        ? `&subtitle=${encodeURIComponent(product.shortDescription)}`
+        : ""
+    }`;
   return {
     title: product.seoTitle ?? product.name,
     description:
@@ -38,7 +46,7 @@ export async function generateMetadata({
     openGraph: {
       title: product.seoTitle ?? product.name,
       description: product.shortDescription ?? undefined,
-      images: image ? [{ url: image }] : undefined,
+      images: [{ url: ogImage }],
       type: "website",
     },
   };
@@ -95,6 +103,31 @@ export default async function ProductPage({
       ? String((product.description as { text: unknown }).text)
       : "";
 
+  const productUrl = `${publicEnv.siteUrl}/producto/${product.slug}`;
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { name: "Inicio", item: publicEnv.siteUrl },
+      { name: "Productos", item: `${publicEnv.siteUrl}/productos` },
+      ...(primaryCategory
+        ? [
+            {
+              name: primaryCategory.name,
+              item: `${publicEnv.siteUrl}/categoria/${primaryCategory.slug}`,
+            },
+          ]
+        : []),
+      { name: product.name, item: productUrl },
+    ].map((entry, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: entry.name,
+      item: entry.item,
+    })),
+  };
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -111,16 +144,14 @@ export default async function ProductPage({
       availability: priceSummary.inStock
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
-      url: `${publicEnv.siteUrl}/producto/${product.slug}`,
+      url: productUrl,
     },
   };
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLd data={jsonLd} />
+      <JsonLd data={breadcrumbJsonLd} />
 
       <nav className="text-foreground-muted mb-4 text-xs" aria-label="Ruta">
         <Link href="/" className="hover:text-foreground">
@@ -171,6 +202,8 @@ export default async function ProductPage({
 
           <div className="mt-6">
             <ProductPurchase
+              productId={product.id}
+              productName={product.name}
               attributes={attributes}
               variants={variants}
               customFields={product.customFields.map((f) => ({

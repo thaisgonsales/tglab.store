@@ -136,6 +136,26 @@ enviado, listo para retiro, entregado, cancelado).
 
 Un fallo de email nunca rompe el checkout ni un cambio de estado.
 
+## SEO y analítica
+
+- **Metadatos** por página (title/description/canonical/OpenGraph), `sitemap.xml`
+  y `robots.txt` dinámicos.
+- **Datos estructurados** JSON-LD: `Organization` + `WebSite` (home),
+  `Product` + `BreadcrumbList` (ficha de producto).
+- **Imagen OpenGraph** generada en `/api/og` (fallback cuando no se sube una en
+  `/admin/configuracion`); acepta `?title=` y `?subtitle=`.
+- **Analítica opcional**: GA4 (`NEXT_PUBLIC_GA4_ID`) y Meta Pixel
+  (`NEXT_PUBLIC_META_PIXEL_ID`). Sin IDs no se carga ningún script de terceros.
+  Eventos de e-commerce: `view_item`, `add_to_cart`, `remove_from_cart`,
+  `view_cart`, `begin_checkout`, `purchase` (deduplicado por pedido).
+
+## Páginas informativas
+
+Nosotros, contacto, preguntas frecuentes, términos, privacidad,
+cambios/devoluciones y despachos se editan desde `/admin/paginas`. Mientras no
+se editen muestran un contenido por defecto; las legales llevan `[PLACEHOLDER]`
+hasta completarse con los datos reales de TG LAB.
+
 ## Almacenamiento de archivos
 
 `STORAGE_DRIVER=local` guarda las subidas en `public/uploads/` (solo desarrollo).
@@ -176,8 +196,8 @@ Pendiente (Fase 15). Estrategia definida en `docs/ARQUITECTURA.md` §17.
 | **F9 — Pedidos admin + seguimiento + emails** | ✅ completada                 |
 | **F10 — Cupones**                        | ✅ completada                      |
 | **F11 — Solicitudes personalizadas**     | ✅ completada                      |
-| F12 — Cuentas de cliente                | ⏳ pendiente                       |
-| F13 — SEO + analítica + legales         | 🚧 parcial                        |
+| F12 — Cuentas de cliente                | ⏳ pendiente (opcional en la arquitectura) |
+| **F13 — SEO + analítica + legales**     | ✅ completada                      |
 | F14 — Hardening + testing + performance | ⏳ pendiente                       |
 | F15 — Deploy + backups + boleta + docs  | ⏳ pendiente                       |
 
