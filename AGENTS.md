@@ -45,6 +45,8 @@ npm run admin:create   # crear usuario del panel
 ```
 
 - Los scripts que importan código con `import "server-only"` corren con `tsx --conditions=react-server` (ya configurado en los scripts npm).
+- **Migraciones**: `prisma migrate dev` NO funciona en este entorno (no interactivo). Para una migración nueva: editar `schema.prisma`, `npm run db:migrate:new <nombre>`, revisar el SQL generado y aplicar con `npm run db:migrate:deploy`.
+- **Pruebas de integración** (tocan la BD): `npm run test:integration` (config aparte, con la BD local corriendo). Las de `npm run test` son solo unitarias puras.
 - Antes de una migración destructiva: detenerse y explicar las consecuencias.
 
 ## Convenciones de código

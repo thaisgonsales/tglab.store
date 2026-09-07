@@ -391,6 +391,7 @@ model ProductVariant {
   attributeValues    VariantAttributeValue[]
   media              ProductMedia[]
   inventoryMovements InventoryMovement[]
+  stockReservations  StockReservation[]
   cartItems          CartItem[]
   orderItems         OrderItem[]
 
@@ -545,6 +546,10 @@ model Order {
   id     String @id @default(cuid())
   number String @unique // "TG-000001"
 
+  // Clave de idempotencia enviada por el checkout: evita crear pedidos
+  // duplicados por doble clic o reintentos del navegador.
+  idempotencyKey String? @unique
+
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
@@ -560,10 +565,16 @@ model Order {
 
   fulfillmentMethod FulfillmentMethod @default(SHIPPING)
   shippingAddress   Json? // snapshot de dirección
+  region            String?
+  comuna            String?
+  shippingRateId    String?
   shippingRateName  String?
   carrier           String?
   trackingNumber    String?
   trackingUrl       String?
+
+  // Ventana de pago: al vencer, se liberan las reservas de stock.
+  expiresAt DateTime?
 
   // montos (recalculados server-side, CLP)
   currency      String @default("CLP")
@@ -588,6 +599,7 @@ model Order {
   payments           Payment[]
   statusHistory      OrderStatusHistory[]
   inventoryMovements InventoryMovement[]
+  stockReservations  StockReservation[]
   couponUses         CouponUse[]
   documents          DocumentRecord[]
 
@@ -595,7 +607,38 @@ model Order {
   @@index([status])
   @@index([paymentStatus])
   @@index([createdAt])
+  @@index([expiresAt])
   @@map("order")
+}
+
+enum StockReservationStatus {
+  HELD
+  RELEASED
+  CONSUMED
+}
+
+/// Reserva temporal de stock creada al confirmar el checkout (antes de pagar).
+/// La disponibilidad real de una variante es `stock - reservedStock`.
+///  - pago aprobado  -> CONSUMED (baja `stock` y `reservedStock`)
+///  - pago fallido / vencimiento -> RELEASED (baja `reservedStock`)
+model StockReservation {
+  id        String         @id @default(cuid())
+  orderId   String
+  order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  quantity   Int
+  status     StockReservationStatus @default(HELD)
+  expiresAt  DateTime
+  resolvedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([status, expiresAt])
+  @@index([variantId])
+  @@index([orderId])
+  @@map("stock_reservation")
 }
 
 model OrderItem {

@@ -1,11 +1,21 @@
-import { AdminPagePlaceholder } from "@/components/admin/admin-placeholder";
+import { PageHeader } from "@/components/admin/page-header";
+import { SettingsForms } from "@/components/admin/settings-forms";
+import { getAllSettings } from "@/server/services/settings-service";
+import { paymentMethodsStatus } from "@/server/payments/registry";
 
-export default function Page() {
+export const dynamic = "force-dynamic";
+
+export default async function AdminSettingsPage() {
+  const settings = await getAllSettings();
+  const payments = paymentMethodsStatus();
+
   return (
-    <AdminPagePlaceholder
-      title="Configuración"
-      phase="Fase 1-15"
-      description="Marca, colores, textos, contacto, WhatsApp, redes y umbrales de stock."
-    />
+    <div className="max-w-2xl">
+      <PageHeader
+        title="Configuración"
+        description="Marca, contacto, retiro, despacho y datos para transferencia."
+      />
+      <SettingsForms settings={settings} paymentMethods={payments} />
+    </div>
   );
 }

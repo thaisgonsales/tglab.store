@@ -25,6 +25,29 @@ async function seedSettings() {
       update: {}, // no piso configuración ya editada
     });
   }
+
+  // Datos DEMO para poder probar el checkout completo en desarrollo.
+  await db.setting.upsert({
+    where: { key: "commerce" },
+    create: {
+      key: "commerce",
+      value: {
+        ...defaults.commerce,
+        pickupEnabled: true,
+        bankTransferInstructions:
+          "[DEMO] Datos de ejemplo — reemplázalos en /admin/configuracion.",
+        bankTransferDetails: {
+          accountHolder: "[DEMO] Nombre Apellido",
+          rut: "11.111.111-1",
+          bank: "[DEMO] Banco Ejemplo",
+          accountType: "Cuenta Vista",
+          accountNumber: "00000000",
+          email: "pagos@tglab.local",
+        },
+      } as Prisma.InputJsonValue,
+    },
+    update: {},
+  });
   console.log("· settings");
 }
 
