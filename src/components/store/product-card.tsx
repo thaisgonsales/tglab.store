@@ -32,7 +32,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           </div>
         )}
         {price.discountPercent > 0 && (
-          <Badge variant="brand" className="absolute top-2 left-2">
+          <Badge variant="offer" className="absolute top-2 left-2">
             -{price.discountPercent}%
           </Badge>
         )}

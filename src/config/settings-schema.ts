@@ -20,9 +20,9 @@ export const brandSettingsSchema = z.object({
   logoDarkUrl: z.string().default(""),
   faviconUrl: z.string().default(""),
   ogImageUrl: z.string().default(""),
-  colorPrimary: z.string().default("#0e7c86"),
-  colorPrimaryDark: z.string().default("#45d6c5"),
-  colorAccent: z.string().default("#e0a955"),
+  colorPrimary: z.string().default("#bd527c"),
+  colorPrimaryDark: z.string().default("#f2aac6"),
+  colorAccent: z.string().default("#ef9d68"),
 });
 
 export const homeSettingsSchema = z.object({

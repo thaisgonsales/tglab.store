@@ -114,7 +114,7 @@ export function ProductPurchase({
             <span className="text-foreground-muted line-through">
               {formatCLP(compareAt)}
             </span>
-            <span className="bg-brand text-brand-fg rounded-full px-2 py-0.5 text-xs font-medium">
+            <span className="bg-accent rounded-full px-2 py-0.5 text-xs font-medium text-[#4a2a12]">
               -{discountPercent(compareAt, price)}%
             </span>
           </>
