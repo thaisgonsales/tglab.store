@@ -1,11 +1,23 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge";
+import { ProductCard } from "@/components/store/product-card";
+import { ProductGallery } from "@/components/store/product-gallery";
+import { ProductPurchase } from "@/components/store/product-purchase";
+import { WhatsappProductButton } from "@/components/store/whatsapp-product-button";
+import {
+  DEFAULT_LAST_UNITS_THRESHOLD,
+  DEFAULT_LOW_STOCK_THRESHOLD,
+} from "@/config/constants";
+import { publicEnv } from "@/lib/env";
 import { formatCLP } from "@/lib/money";
 import { summarizePrice } from "@/lib/product-price";
-import { getPublishedProductBySlug } from "@/server/services/catalog-service";
+import {
+  getPublishedProductBySlug,
+  getRelatedProducts,
+} from "@/server/services/catalog-service";
+import { getSettingsGroup } from "@/server/services/settings-service";
 
 type Params = { slug: string };
 
@@ -17,10 +29,18 @@ export async function generateMetadata({
   const { slug } = await params;
   const product = await getPublishedProductBySlug(slug);
   if (!product) return { title: "Producto no encontrado" };
+  const image = product.media.find((m) => m.type === "IMAGE")?.url;
   return {
     title: product.seoTitle ?? product.name,
     description:
       product.seoDescription ?? product.shortDescription ?? undefined,
+    alternates: { canonical: `/producto/${product.slug}` },
+    openGraph: {
+      title: product.seoTitle ?? product.name,
+      description: product.shortDescription ?? undefined,
+      images: image ? [{ url: image }] : undefined,
+      type: "website",
+    },
   };
 }
 
@@ -33,30 +53,111 @@ export default async function ProductPage({
   const product = await getPublishedProductBySlug(slug);
   if (!product) notFound();
 
-  const price = summarizePrice(product.variants);
-  const images = product.media.filter((m) => m.type === "IMAGE");
+  const [commerce, contact] = await Promise.all([
+    getSettingsGroup("commerce"),
+    getSettingsGroup("contact"),
+  ]);
+
+  const priceSummary = summarizePrice(product.variants);
+  const categoryIds = product.categories.map((c) => c.categoryId);
+  const related = await getRelatedProducts(product.id, categoryIds, 4);
+
+  const primaryCategory =
+    product.categories.find((c) => c.isPrimary)?.category ??
+    product.categories[0]?.category;
+
+  const attributes = product.attributes.map((pa) => ({
+    id: pa.attributeId,
+    name: pa.attribute.name,
+    type: pa.attribute.type,
+    values: pa.attribute.values.map((v) => ({
+      id: v.id,
+      label: v.label,
+      hex: v.hex,
+    })),
+  }));
+
+  const variants = product.variants.map((v) => ({
+    id: v.id,
+    price: v.price,
+    compareAtPrice: v.compareAtPrice,
+    stock: v.stock,
+    sku: v.sku,
+    options: Object.fromEntries(
+      v.attributeValues.map((av) => [av.attributeId, av.attributeValueId]),
+    ),
+  }));
+
+  const description =
+    product.description &&
+    typeof product.description === "object" &&
+    "text" in product.description
+      ? String((product.description as { text: unknown }).text)
+      : "";
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: product.shortDescription ?? undefined,
+    image: product.media
+      .filter((m) => m.type === "IMAGE")
+      .map((m) => `${publicEnv.siteUrl}${m.url}`),
+    sku: product.sku ?? undefined,
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "CLP",
+      price: priceSummary.from,
+      availability: priceSummary.inStock
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      url: `${publicEnv.siteUrl}/producto/${product.slug}`,
+    },
+  };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
+    <div className="mx-auto max-w-5xl px-4 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
+      <nav className="text-foreground-muted mb-4 text-xs" aria-label="Ruta">
+        <Link href="/" className="hover:text-foreground">
+          Inicio
+        </Link>{" "}
+        /{" "}
+        <Link href="/productos" className="hover:text-foreground">
+          Productos
+        </Link>
+        {primaryCategory && (
+          <>
+            {" "}
+            /{" "}
+            <Link
+              href={`/categoria/${primaryCategory.slug}`}
+              className="hover:text-foreground"
+            >
+              {primaryCategory.name}
+            </Link>
+          </>
+        )}{" "}
+        / <span className="text-foreground">{product.name}</span>
+      </nav>
+
       <div className="grid gap-8 md:grid-cols-2">
-        <div className="space-y-3">
-          <div className="rounded-card bg-surface-muted relative aspect-square overflow-hidden">
-            {images[0] ? (
-              <Image
-                src={images[0].url}
-                alt={images[0].alt ?? product.name}
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover"
-                priority
-              />
-            ) : (
-              <div className="text-foreground-muted flex h-full items-center justify-center text-sm">
-                Sin imagen
-              </div>
-            )}
-          </div>
-        </div>
+        <ProductGallery
+          productName={product.name}
+          media={product.media.map((m) => ({
+            id: m.id,
+            type: m.type,
+            provider: m.provider,
+            url: m.url,
+            posterUrl: m.posterUrl,
+            alt: m.alt,
+            blurDataUrl: m.blurDataUrl,
+          }))}
+        />
 
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -68,36 +169,92 @@ export default async function ProductPage({
             </p>
           )}
 
-          <div className="mt-4 flex items-baseline gap-3">
-            <span className="text-2xl font-semibold">
-              {price.hasRange ? "Desde " : ""}
-              {formatCLP(price.from)}
-            </span>
-            {price.compareAt && (
-              <span className="text-foreground-muted line-through">
-                {formatCLP(price.compareAt)}
-              </span>
-            )}
-            {price.discountPercent > 0 && (
-              <Badge variant="brand">-{price.discountPercent}%</Badge>
-            )}
+          <div className="mt-6">
+            <ProductPurchase
+              attributes={attributes}
+              variants={variants}
+              customFields={product.customFields.map((f) => ({
+                key: f.key,
+                label: f.label,
+                helpText: f.helpText,
+                type: f.type,
+                isRequired: f.isRequired,
+                maxLength: f.maxLength,
+                options: Array.isArray(f.options) ? f.options.map(String) : [],
+              }))}
+              lowStockThreshold={
+                product.lowStockThreshold ??
+                commerce.lowStockThreshold ??
+                DEFAULT_LOW_STOCK_THRESHOLD
+              }
+              lastUnitsThreshold={
+                product.lastUnitsThreshold ??
+                commerce.lastUnitsThreshold ??
+                DEFAULT_LAST_UNITS_THRESHOLD
+              }
+            />
           </div>
 
-          <p className="mt-2 text-sm">
-            {price.inStock ? (
-              <span className="text-emerald-600">En stock</span>
-            ) : (
-              <span className="text-foreground-muted">Agotado</span>
-            )}
-          </p>
+          {contact.whatsapp && (
+            <div className="mt-4">
+              <WhatsappProductButton
+                phone={contact.whatsapp}
+                template={contact.whatsappMessage}
+                productName={product.name}
+                productUrl={`${publicEnv.siteUrl}/producto/${product.slug}`}
+              />
+            </div>
+          )}
 
-          <div className="rounded-card border-border text-foreground-muted mt-6 border border-dashed p-4 text-sm">
-            El selector de variantes, la galería con video, la personalización y
-            el botón &ldquo;Agregar al carrito&rdquo; se implementan en las
-            Fases 5 y 6.
-          </div>
+          <dl className="border-border mt-6 space-y-1 border-t pt-4 text-sm">
+            {product.material && (
+              <Row label="Material" value={product.material} />
+            )}
+            {product.dimensions && (
+              <Row label="Dimensiones" value={product.dimensions} />
+            )}
+            {product.weightGrams && (
+              <Row label="Peso" value={`${product.weightGrams} g`} />
+            )}
+          </dl>
         </div>
       </div>
+
+      {description && (
+        <section className="mt-10 max-w-prose">
+          <h2 className="text-lg font-semibold">Descripción</h2>
+          <p className="text-foreground-muted mt-2 text-sm leading-relaxed whitespace-pre-line">
+            {description}
+          </p>
+        </section>
+      )}
+
+      {related.length > 0 && (
+        <section className="mt-14">
+          <h2 className="mb-4 text-lg font-semibold">
+            También podría interesarte
+          </h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {related.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <p className="text-foreground-muted mt-10 text-xs">
+        Precio de referencia desde {formatCLP(priceSummary.from)} · IVA
+        incluido.
+      </p>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex gap-2">
+      <dt className="text-foreground-muted w-28 shrink-0">{label}</dt>
+      <dd>{value}</dd>
     </div>
   );
 }

@@ -3,15 +3,29 @@ import Link from "next/link";
 
 import { ProductCard } from "@/components/store/product-card";
 import { Button } from "@/components/ui/button";
-import { listPublishedProducts } from "@/server/services/catalog-service";
+import {
+  getBestSellers,
+  listPublishedProducts,
+  searchCatalog,
+} from "@/server/services/catalog-service";
 import { getAllSettings } from "@/server/services/settings-service";
 
 export default async function HomePage() {
   const { home, contact } = await getAllSettings();
-  const [featured, latest] = await Promise.all([
+  const [featured, latest, bestSellers, offersResult] = await Promise.all([
     listPublishedProducts({ featured: true, take: 8 }),
     listPublishedProducts({ take: 8 }),
+    getBestSellers(8),
+    searchCatalog({ onlyOffers: true, sort: "ofertas", perPage: 8 }),
   ]);
+  const offers = offersResult.items;
+
+  const sectionData: Record<string, typeof latest> = {
+    featured,
+    new: latest,
+    bestsellers: bestSellers,
+    offers,
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4">
@@ -69,20 +83,22 @@ export default async function HomePage() {
         ))}
       </section>
 
-      {featured.length > 0 && (
-        <ProductSection
-          title="Productos destacados"
-          href="/productos"
-          products={featured}
-        />
-      )}
-      {latest.length > 0 && (
-        <ProductSection
-          title="Nuevos productos"
-          href="/productos"
-          products={latest}
-        />
-      )}
+      {home.sections
+        .filter((s) => s.enabled && (sectionData[s.type]?.length ?? 0) > 0)
+        .map((s) => (
+          <ProductSection
+            key={s.key}
+            title={s.title}
+            href={
+              s.type === "offers"
+                ? "/productos?orden=ofertas"
+                : s.type === "new"
+                  ? "/productos?orden=nuevos"
+                  : "/productos"
+            }
+            products={sectionData[s.type] ?? []}
+          />
+        ))}
 
       {featured.length === 0 && latest.length === 0 && (
         <section className="py-16 text-center">
