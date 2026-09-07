@@ -31,6 +31,8 @@ test("checkout de invitado con retiro crea un pedido", async ({ page }) => {
 
   // Redirige a /checkout/pago/TG-XXXXXX
   await expect(page).toHaveURL(/\/checkout\/pago\/TG-\d+/);
+  const orderNumber = page.url().match(/TG-\d+/)?.[0] ?? "";
+  expect(orderNumber).toMatch(/^TG-\d+$/);
   await expect(page.getByRole("heading", { name: /TG-\d+/ })).toBeVisible();
   await expect(page.getByText(/Estado del pago/i)).toBeVisible();
   await expect(page.getByText(/Pendiente/i).first()).toBeVisible();
@@ -38,4 +40,13 @@ test("checkout de invitado con retiro crea un pedido", async ({ page }) => {
   // El carrito quedó vacío tras crear el pedido
   await page.goto("/carrito");
   await expect(page.getByText(/Todavía no agregaste productos/i)).toBeVisible();
+
+  // Seguimiento público con número + email
+  await page.goto(`/pedido?numero=${orderNumber}`);
+  await page.getByLabel("Email de compra").fill("camila.test@example.com");
+  await page.getByRole("button", { name: "Consultar" }).click();
+  await expect(
+    page.getByRole("heading", { name: new RegExp(orderNumber) }),
+  ).toBeVisible();
+  await expect(page.getByText("Pedido recibido")).toBeVisible();
 });

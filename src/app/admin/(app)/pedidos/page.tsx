@@ -1,13 +1,36 @@
 import Link from "next/link";
 
+import { OrderFilters } from "@/components/admin/order-filters";
 import { PageHeader } from "@/components/admin/page-header";
 import { Badge } from "@/components/ui/badge";
 import { formatCLP } from "@/lib/money";
 import { formatDateTime } from "@/lib/datetime";
+import type {
+  OrderPaymentStatus,
+  OrderStatus,
+} from "@/generated/prisma/client";
 import {
   listAdminOrders,
   type AdminOrderFilters,
 } from "@/server/services/admin-order-service";
+
+const ORDER_STATUSES: OrderStatus[] = [
+  "PENDING_PAYMENT",
+  "PAID",
+  "PREPARING",
+  "READY_FOR_PICKUP",
+  "SHIPPED",
+  "DELIVERED",
+  "CANCELLED",
+];
+const PAYMENT_STATUSES: OrderPaymentStatus[] = [
+  "PENDING",
+  "PAID",
+  "REJECTED",
+  "CANCELLED",
+  "REFUNDED",
+  "EXPIRED",
+];
 
 export const dynamic = "force-dynamic";
 
@@ -28,23 +51,32 @@ export default async function AdminOrdersPage({
   const sp = await searchParams;
   const filters: AdminOrderFilters = {
     q: sp.q?.trim() || undefined,
+    status: ORDER_STATUSES.includes(sp.estado as OrderStatus)
+      ? (sp.estado as OrderStatus)
+      : undefined,
+    paymentStatus: PAYMENT_STATUSES.includes(sp.pago as OrderPaymentStatus)
+      ? (sp.pago as OrderPaymentStatus)
+      : undefined,
+    fulfillmentMethod:
+      sp.entrega === "SHIPPING" || sp.entrega === "PICKUP"
+        ? sp.entrega
+        : undefined,
     page: Number(sp.page) || 1,
   };
   const result = await listAdminOrders(filters);
+
+  const pageHref = (page: number) => {
+    const usp = new URLSearchParams();
+    for (const [k, v] of Object.entries(sp)) if (v) usp.set(k, v);
+    usp.set("page", String(page));
+    return `/admin/pedidos?${usp.toString()}`;
+  };
 
   return (
     <div>
       <PageHeader title="Pedidos" description={`${result.total} pedido(s)`} />
 
-      <form className="mb-4">
-        <input
-          type="search"
-          name="q"
-          defaultValue={filters.q ?? ""}
-          placeholder="Buscar por número, email o nombre…"
-          className="border-border bg-surface h-10 w-full max-w-sm rounded-md border px-3 text-sm"
-        />
-      </form>
+      <OrderFilters />
 
       {result.items.length === 0 ? (
         <p className="rounded-card border-border text-foreground-muted border border-dashed p-10 text-center text-sm">
@@ -110,6 +142,30 @@ export default async function AdminOrdersPage({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {result.pages > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-3 text-sm">
+          {result.page > 1 && (
+            <Link
+              href={pageHref(result.page - 1)}
+              className="border-border rounded-md border px-3 py-1.5"
+            >
+              Anterior
+            </Link>
+          )}
+          <span className="text-foreground-muted">
+            Página {result.page} de {result.pages}
+          </span>
+          {result.page < result.pages && (
+            <Link
+              href={pageHref(result.page + 1)}
+              className="border-border rounded-md border px-3 py-1.5"
+            >
+              Siguiente
+            </Link>
+          )}
         </div>
       )}
     </div>

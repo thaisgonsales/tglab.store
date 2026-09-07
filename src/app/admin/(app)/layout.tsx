@@ -16,7 +16,7 @@ export default async function AdminAppLayout({
 
   return (
     <div className="bg-background min-h-screen">
-      <header className="border-border bg-surface sticky top-0 z-20 flex h-14 items-center justify-between border-b px-4">
+      <header className="border-border bg-surface sticky top-0 z-20 flex h-14 items-center justify-between border-b px-4 print:hidden">
         <Link href="/admin" className="font-semibold tracking-tight">
           <span className="text-brand">TG</span> LAB
           <span className="text-foreground-muted ml-2 text-sm font-normal">
@@ -31,7 +31,7 @@ export default async function AdminAppLayout({
       </header>
 
       <div className="mx-auto flex max-w-7xl">
-        <aside className="border-border hidden w-56 shrink-0 border-r md:block">
+        <aside className="border-border hidden w-56 shrink-0 border-r md:block print:!hidden">
           <div className="sticky top-14">
             <AdminSidebar />
           </div>

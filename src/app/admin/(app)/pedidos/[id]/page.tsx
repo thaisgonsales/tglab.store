@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/admin/page-header";
 import { OrderActions } from "@/components/admin/order-actions";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCLP } from "@/lib/money";
 import { formatDateTime } from "@/lib/datetime";
@@ -35,6 +37,14 @@ export default async function AdminOrderDetailPage({
             >
               {order.paymentStatus}
             </Badge>
+            <Button asChild variant="outline" size="sm">
+              <Link
+                href={`/admin/pedidos/${order.id}/imprimir`}
+                target="_blank"
+              >
+                Imprimir
+              </Link>
+            </Button>
           </>
         }
       />

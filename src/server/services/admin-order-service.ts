@@ -11,6 +11,7 @@ export type AdminOrderFilters = {
   q?: string;
   status?: OrderStatus;
   paymentStatus?: OrderPaymentStatus;
+  fulfillmentMethod?: "SHIPPING" | "PICKUP";
   page?: number;
 };
 
@@ -28,6 +29,8 @@ export async function listAdminOrders(filters: AdminOrderFilters = {}) {
   }
   if (filters.status) where.status = filters.status;
   if (filters.paymentStatus) where.paymentStatus = filters.paymentStatus;
+  if (filters.fulfillmentMethod)
+    where.fulfillmentMethod = filters.fulfillmentMethod;
 
   const [items, total] = await Promise.all([
     db.order.findMany({

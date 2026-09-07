@@ -1,16 +1,30 @@
 import type { Metadata } from "next";
 
-import { PageShell, PhaseNotice } from "@/components/store/page-shell";
+import { OrderTracking } from "@/components/store/order-tracking";
 
-export const metadata: Metadata = { title: "Seguimiento de pedido" };
+export const metadata: Metadata = {
+  title: "Seguimiento de pedido",
+  robots: { index: false, follow: false },
+};
 
-export default function OrderTrackingPage() {
+export default async function OrderTrackingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ numero?: string }>;
+}) {
+  const { numero } = await searchParams;
+
   return (
-    <PageShell
-      title="Seguir mi pedido"
-      lead="Consulta el estado de tu pedido con el número (TG-XXXXXX) y el email de compra."
-    >
-      <PhaseNotice area="El seguimiento de pedidos" />
-    </PageShell>
+    <div className="mx-auto max-w-2xl px-4 py-12">
+      <h1 className="text-2xl font-semibold tracking-tight">
+        Seguir mi pedido
+      </h1>
+      <p className="text-foreground-muted mt-2 text-sm">
+        Ingresa el número de pedido (TG-XXXXXX) y el email con el que compraste.
+      </p>
+      <div className="mt-6">
+        <OrderTracking defaultNumber={numero} />
+      </div>
+    </div>
   );
 }

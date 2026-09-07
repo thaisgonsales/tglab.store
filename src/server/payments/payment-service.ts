@@ -34,14 +34,29 @@ export type ProviderPaymentResult = {
  */
 export async function applyProviderPayment(
   result: ProviderPaymentResult,
-): Promise<{ handled: boolean; orderPaymentStatus: string }> {
-  return db.$transaction(async (tx) => {
+): Promise<{
+  handled: boolean;
+  orderPaymentStatus: string;
+  transitionedToPaid: boolean;
+  orderId: string | null;
+}> {
+  const outcome = await db.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { number: result.orderNumber.toUpperCase().trim() },
     });
     if (!order) {
-      return { handled: false, orderPaymentStatus: "UNKNOWN" };
+      return {
+        handled: false,
+        orderPaymentStatus: "UNKNOWN",
+        transitionedToPaid: false,
+        orderId: null,
+      };
     }
+    const base = {
+      handled: true,
+      transitionedToPaid: false,
+      orderId: order.id,
+    };
 
     // Idempotencia: ¿ya registramos este pago del proveedor?
     const existingPayment = await tx.payment.findUnique({
@@ -53,10 +68,10 @@ export async function applyProviderPayment(
       },
     });
     if (existingPayment && existingPayment.status === "PAID") {
-      return { handled: true, orderPaymentStatus: order.paymentStatus };
+      return { ...base, orderPaymentStatus: order.paymentStatus };
     }
     if (order.paymentStatus === "PAID") {
-      return { handled: true, orderPaymentStatus: "PAID" };
+      return { ...base, orderPaymentStatus: "PAID" };
     }
 
     const rawPayload = result.raw as Prisma.InputJsonValue;
@@ -75,7 +90,7 @@ export async function applyProviderPayment(
             note: `Pago rechazado: monto ${result.amountPaid} < total ${order.grandTotal}.`,
           },
         });
-        return { handled: true, orderPaymentStatus: order.paymentStatus };
+        return { ...base, orderPaymentStatus: order.paymentStatus };
       }
 
       await consumeReservations(tx, order.id);
@@ -99,7 +114,7 @@ export async function applyProviderPayment(
       await tx.documentRecord.create({
         data: { orderId: order.id, type: "BOLETA", status: "PENDING" },
       });
-      return { handled: true, orderPaymentStatus: "PAID" };
+      return { ...base, orderPaymentStatus: "PAID", transitionedToPaid: true };
     }
 
     if (result.status === "REJECTED" || result.status === "CANCELLED") {
@@ -112,13 +127,21 @@ export async function applyProviderPayment(
         },
       });
       await upsertPayment(tx, order.id, result, result.status, rawPayload);
-      return { handled: true, orderPaymentStatus: result.status };
+      return { ...base, orderPaymentStatus: result.status };
     }
 
     // PENDING: solo registra el intento.
     await upsertPayment(tx, order.id, result, "PENDING", rawPayload);
-    return { handled: true, orderPaymentStatus: order.paymentStatus };
+    return { ...base, orderPaymentStatus: order.paymentStatus };
   });
+
+  if (outcome.transitionedToPaid && outcome.orderId) {
+    const { sendPaymentConfirmedEmail } =
+      await import("@/server/email/order-emails");
+    await sendPaymentConfirmedEmail(outcome.orderId);
+  }
+
+  return outcome;
 }
 
 async function upsertPayment(

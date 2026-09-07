@@ -193,6 +193,10 @@ export async function createOrder(
 
     revalidatePath("/", "layout");
 
+    const { sendOrderReceivedEmail } =
+      await import("@/server/email/order-emails");
+    await sendOrderReceivedEmail(order.id);
+
     return {
       ok: true,
       data: { orderNumber: order.number, orderId: order.id },

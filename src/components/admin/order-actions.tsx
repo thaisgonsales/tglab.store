@@ -13,16 +13,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAction } from "@/lib/use-action";
 import { confirmBankTransfer } from "@/server/actions/payment-actions";
 import {
+  cancelOrder,
   changeOrderStatus,
+  markOrderRefunded,
   updateOrderTracking,
 } from "@/server/actions/order-admin-actions";
 
+// Transiciones "hacia adelante" (la cancelación va por su propia acción).
 const NEXT_STATUS: Record<string, string[]> = {
-  PENDING_PAYMENT: ["PAID", "CANCELLED"],
-  PAID: ["PREPARING", "CANCELLED"],
-  PREPARING: ["READY_FOR_PICKUP", "SHIPPED", "CANCELLED"],
-  READY_FOR_PICKUP: ["DELIVERED", "CANCELLED"],
-  SHIPPED: ["DELIVERED", "CANCELLED"],
+  PENDING_PAYMENT: [],
+  PAID: ["PREPARING"],
+  PREPARING: ["READY_FOR_PICKUP", "SHIPPED"],
+  READY_FOR_PICKUP: ["DELIVERED"],
+  SHIPPED: ["DELIVERED"],
   DELIVERED: [],
   CANCELLED: [],
 };
@@ -43,6 +46,12 @@ export function OrderActions({ order }: { order: Order }) {
   const [toStatus, setToStatus] = useState("");
   const [note, setNote] = useState("");
   const [ref, setRef] = useState("");
+  const [cancelReason, setCancelReason] = useState("");
+  const [refund, setRefund] = useState({
+    amount: "",
+    reference: "",
+    restock: true,
+  });
   const [tracking, setTracking] = useState({
     carrier: order.carrier,
     trackingNumber: order.trackingNumber,
@@ -66,8 +75,19 @@ export function OrderActions({ order }: { order: Order }) {
     successMessage: "Guardado",
     onSuccess: () => router.refresh(),
   });
+  const cancel = useAction(cancelOrder, {
+    successMessage: "Pedido cancelado",
+    onSuccess: () => router.refresh(),
+  });
+  const doRefund = useAction(markOrderRefunded, {
+    successMessage: "Reembolso registrado",
+    onSuccess: () => router.refresh(),
+  });
 
   const options = NEXT_STATUS[order.status] ?? [];
+  const canCancel =
+    order.status !== "CANCELLED" && order.status !== "DELIVERED";
+  const canRefund = order.paymentStatus === "PAID";
 
   return (
     <Card>
@@ -221,6 +241,109 @@ export function OrderActions({ order }: { order: Order }) {
             Guardar seguimiento
           </Button>
         </div>
+
+        {canRefund && (
+          <div className="border-border rounded-md border p-3">
+            <p className="mb-1 text-sm font-medium">Registrar reembolso</p>
+            <p className="text-foreground-muted text-xs">
+              Anota un reembolso ya hecho por fuera (Mercado Pago /
+              transferencia). Opcionalmente repone el stock. No mueve dinero.
+            </p>
+            <div className="mt-2 flex flex-wrap items-end gap-2">
+              <Input
+                className="w-32"
+                inputMode="numeric"
+                placeholder="Monto CLP"
+                value={refund.amount}
+                onChange={(e) =>
+                  setRefund({ ...refund, amount: e.target.value })
+                }
+              />
+              <Input
+                className="w-40"
+                placeholder="Referencia (opcional)"
+                value={refund.reference}
+                onChange={(e) =>
+                  setRefund({ ...refund, reference: e.target.value })
+                }
+              />
+              <label className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={refund.restock}
+                  onChange={(e) =>
+                    setRefund({ ...refund, restock: e.target.checked })
+                  }
+                />
+                Reponer stock
+              </label>
+              <ConfirmDialog
+                title="Registrar reembolso"
+                description="Marca el pedido como reembolsado y (si corresponde) repone el stock."
+                confirmLabel="Registrar"
+                destructive
+                onConfirm={() =>
+                  doRefund.run({
+                    orderId: order.id,
+                    amount: refund.amount,
+                    reference: refund.reference || undefined,
+                    restock: refund.restock,
+                  })
+                }
+                trigger={
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!refund.amount || doRefund.isPending}
+                  >
+                    Registrar reembolso
+                  </Button>
+                }
+              />
+            </div>
+          </div>
+        )}
+
+        {canCancel && (
+          <div className="rounded-md border border-red-200 p-3">
+            <p className="mb-1 text-sm font-medium text-red-700">
+              Cancelar pedido
+            </p>
+            <p className="text-foreground-muted text-xs">
+              {order.paymentStatus === "PAID"
+                ? "El pedido tiene pago recibido: se marca para revisión de reembolso."
+                : "Libera la reserva de stock."}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Input
+                className="max-w-xs"
+                placeholder="Motivo de la cancelación"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+              />
+              <ConfirmDialog
+                title="Cancelar pedido"
+                description="Se notifica al cliente por email con el motivo indicado."
+                confirmLabel="Cancelar pedido"
+                destructive
+                onConfirm={() =>
+                  cancel.run({ orderId: order.id, reason: cancelReason.trim() })
+                }
+                trigger={
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    disabled={
+                      cancelReason.trim().length < 3 || cancel.isPending
+                    }
+                  >
+                    Cancelar pedido
+                  </Button>
+                }
+              />
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

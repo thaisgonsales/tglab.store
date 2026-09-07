@@ -124,17 +124,30 @@ desde `/admin/pedidos` (ahí se descuenta el stock).
 En ambos casos: el stock se **reserva** al crear el pedido y solo se
 **descuenta** al confirmarse el pago. Nunca se almacenan datos de tarjeta.
 
+## Emails transaccionales
+
+Desacoplado detrás de `EmailProvider` (`src/server/email/`). Se envían al crear
+un pedido, al confirmarse el pago y en cada cambio de estado (preparación,
+enviado, listo para retiro, entregado, cancelado).
+
+- **Con `RESEND_API_KEY`** → envía con Resend.
+- **Sin clave, en desarrollo/test** → imprime el correo en la consola.
+- **Sin clave, en producción** → **no envía y registra el fallo** (no finge).
+
+Un fallo de email nunca rompe el checkout ni un cambio de estado.
+
 ## Almacenamiento de archivos
 
 `STORAGE_DRIVER=local` guarda las subidas en `public/uploads/` (solo desarrollo).
-En producción se usa `STORAGE_DRIVER=s3` con Cloudflare R2 (S3-compatible). La
-implementación llega en la Fase 3.
+En producción se usa `STORAGE_DRIVER=s3` con Cloudflare R2 (S3-compatible).
 
 ## Testing
 
-- **Unitarias** (Vitest): `tests/unit/` y `*.test.ts` junto al código.
-- **E2E** (Playwright): `tests/e2e/` — flujo crítico
-  producto → variante → carrito → checkout → pago → pedido → stock (Fases 5–8).
+- **Unitarias** (Vitest): `npm run test` — lógica pura (`tests/unit/`).
+- **Integración** (BD real): `npm run test:integration` — reservas de stock,
+  aplicación de pagos, seguimiento de pedidos, emails.
+- **E2E** (Playwright): `npm run test:e2e` — flujo crítico
+  catálogo → variante → carrito → checkout → pedido → seguimiento público.
 
 ## Deploy
 
@@ -149,24 +162,24 @@ Pendiente (Fase 15). Estrategia definida en `docs/ARQUITECTURA.md` §17.
 
 ## Estado por fases
 
-| Fase                                    | Estado         |
-| --------------------------------------- | -------------- |
-| **F0 — Setup del proyecto**             | ✅ completada   |
-| F1 — Base de datos (schema + seed)      | ✅ base lista   |
-| F2 — Auth admin + shell                 | ✅ base lista   |
-| F3 — Catálogo admin (productos simples) | ⏳ pendiente    |
-| F4 — Variantes + stock                  | ⏳ pendiente    |
-| F5 — Storefront catálogo                | 🚧 esqueleto   |
-| F6 — Carrito                            | ⏳ pendiente    |
-| F7 — Checkout + despachos               | ⏳ pendiente    |
-| F8 — Pagos                              | ⏳ pendiente    |
-| F9 — Pedidos + seguimiento + emails     | ⏳ pendiente    |
-| F10 — Cupones                           | ⏳ pendiente    |
-| F11 — Personalizados                    | ⏳ pendiente    |
-| F12 — Cuentas de cliente                | ⏳ pendiente    |
-| F13 — SEO + analítica + legales         | 🚧 parcial     |
-| F14 — Hardening + testing + performance | ⏳ pendiente    |
-| F15 — Deploy + backups + boleta + docs  | ⏳ pendiente    |
+| Fase                                    | Estado                            |
+| --------------------------------------- | --------------------------------- |
+| **F0 — Setup del proyecto**             | ✅ completada                      |
+| **F1 — Base de datos (schema + seed)**  | ✅ completada                      |
+| **F2 — Auth admin + shell**             | ✅ completada                      |
+| **F3 — Catálogo admin**                 | ✅ completada                      |
+| **F4 — Variantes + stock**              | ✅ completada                      |
+| **F5 — Storefront catálogo**            | ✅ completada                      |
+| **F6 — Carrito**                        | ✅ completada                      |
+| **F7 — Checkout + despachos + pedidos** | ✅ completada                      |
+| **F8 — Pagos**                          | ✅ código listo — falta activar Mercado Pago (credenciales) |
+| **F9 — Pedidos admin + seguimiento + emails** | ✅ completada                 |
+| F10 — Cupones                           | ⏳ pendiente                       |
+| F11 — Personalizados                    | ⏳ pendiente                       |
+| F12 — Cuentas de cliente                | ⏳ pendiente                       |
+| F13 — SEO + analítica + legales         | 🚧 parcial                        |
+| F14 — Hardening + testing + performance | ⏳ pendiente                       |
+| F15 — Deploy + backups + boleta + docs  | ⏳ pendiente                       |
 
 ### Desviaciones respecto a `docs/ARQUITECTURA.md`
 

@@ -183,6 +183,16 @@ export async function confirmBankTransfer(
       });
     });
 
+    const order = await db.order.findUnique({
+      where: { number: orderNumber.toUpperCase().trim() },
+      select: { id: true },
+    });
+    if (order) {
+      const { sendPaymentConfirmedEmail } =
+        await import("@/server/email/order-emails");
+      await sendPaymentConfirmedEmail(order.id);
+    }
+
     revalidatePath("/admin/pedidos");
     return null;
   });
