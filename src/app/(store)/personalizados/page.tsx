@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
-import { PageShell, PhaseNotice } from "@/components/store/page-shell";
+import { CustomRequestForm } from "@/components/store/custom-request-form";
+import { getSettingsGroup } from "@/server/services/settings-service";
 
 export const metadata: Metadata = {
   title: "Productos personalizados",
@@ -8,13 +9,19 @@ export const metadata: Metadata = {
     "Solicita un producto hecho a tu medida mediante impresión 3D. Enviar la solicitud no constituye una compra.",
 };
 
-export default function CustomRequestsPage() {
+export default async function CustomRequestsPage() {
+  const home = await getSettingsGroup("home");
+
   return (
-    <PageShell
-      title="Productos personalizados"
-      lead="Cuéntanos tu idea y te enviaremos una cotización. Enviar esta solicitud no constituye automáticamente una compra."
-    >
-      <PhaseNotice area="El formulario de solicitudes personalizadas" />
-    </PageShell>
+    <div className="mx-auto max-w-2xl px-4 py-12">
+      <h1 className="text-2xl font-semibold tracking-tight">
+        {home.customCtaTitle}
+      </h1>
+      <p className="text-foreground-muted mt-2 text-sm">{home.customCtaText}</p>
+
+      <div className="mt-8">
+        <CustomRequestForm />
+      </div>
+    </div>
   );
 }
