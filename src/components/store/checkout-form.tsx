@@ -80,14 +80,14 @@ export function CheckoutForm({
   const comuna = watch("comuna");
   const rateId = watch("shippingRateId");
   const couponCode = watch("couponCode");
+  const emailValue = watch("email");
 
-  // Recotiza cuando cambian los datos que afectan el total.
+  // Recotiza cuando cambian los datos que afectan el total (con debounce
+  // para el cupón y el email).
   useEffect(() => {
     let cancelled = false;
-    async function refresh() {
-      if (method === "SHIPPING" && (!region || !comuna)) {
-        return;
-      }
+    const timer = setTimeout(async () => {
+      if (method === "SHIPPING" && (!region || !comuna)) return;
       setQuoting(true);
       const res = await quoteCheckout({
         fulfillmentMethod: method,
@@ -95,17 +95,18 @@ export function CheckoutForm({
         comuna: method === "SHIPPING" ? comuna : undefined,
         shippingRateId: rateId || undefined,
         couponCode: couponCode || undefined,
+        customerEmail: emailValue?.includes("@") ? emailValue : undefined,
       });
       if (!cancelled) {
         if (res.ok) setQuote(res.data);
         setQuoting(false);
       }
-    }
-    void refresh();
+    }, 350);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [method, region, comuna, rateId, couponCode]);
+  }, [method, region, comuna, rateId, couponCode, emailValue]);
 
   async function onSubmit(values: CheckoutFormValues) {
     if (submitting.current) return;
@@ -303,9 +304,25 @@ export function CheckoutForm({
         <section className="rounded-card border-border bg-surface border p-5">
           <h2 className="mb-3 text-base font-semibold">Cupón y notas</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <FieldInput label="Código de cupón (opcional)">
-              <Input {...register("couponCode")} placeholder="BIENVENIDO10" />
-            </FieldInput>
+            <div>
+              <FieldInput label="Código de cupón (opcional)">
+                <Input
+                  {...register("couponCode")}
+                  placeholder="BIENVENIDO10"
+                  className="uppercase"
+                />
+              </FieldInput>
+              {couponCode && quote.appliedCoupon && (
+                <p className="mt-1 text-xs text-emerald-600">
+                  Cupón {quote.appliedCoupon.code} aplicado.
+                </p>
+              )}
+              {couponCode && !quote.appliedCoupon && quote.couponError && (
+                <p className="mt-1 text-xs text-amber-700">
+                  {quote.couponError}
+                </p>
+              )}
+            </div>
           </div>
           <div className="mt-3">
             <FieldInput label="Nota para el pedido (opcional)">

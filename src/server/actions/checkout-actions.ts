@@ -12,6 +12,7 @@ const quoteSchema = z.object({
   comuna: z.string().max(80).optional(),
   shippingRateId: z.string().cuid().optional(),
   couponCode: z.string().max(40).optional(),
+  customerEmail: z.string().email().max(160).optional().or(z.literal("")),
 });
 
 /**
@@ -29,6 +30,10 @@ export async function quoteCheckout(
   if (!cartToken) {
     return { ok: false, error: "Tu carrito está vacío." };
   }
-  const quote = await quoteCart({ cartToken, ...parsed.data });
+  const quote = await quoteCart({
+    cartToken,
+    ...parsed.data,
+    customerEmail: parsed.data.customerEmail || undefined,
+  });
   return { ok: true, data: quote };
 }

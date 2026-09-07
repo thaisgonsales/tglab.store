@@ -174,7 +174,7 @@ Pendiente (Fase 15). Estrategia definida en `docs/ARQUITECTURA.md` §17.
 | **F7 — Checkout + despachos + pedidos** | ✅ completada                      |
 | **F8 — Pagos**                          | ✅ código listo — falta activar Mercado Pago (credenciales) |
 | **F9 — Pedidos admin + seguimiento + emails** | ✅ completada                 |
-| F10 — Cupones                           | ⏳ pendiente                       |
+| **F10 — Cupones**                        | ✅ completada                      |
 | F11 — Personalizados                    | ⏳ pendiente                       |
 | F12 — Cuentas de cliente                | ⏳ pendiente                       |
 | F13 — SEO + analítica + legales         | 🚧 parcial                        |

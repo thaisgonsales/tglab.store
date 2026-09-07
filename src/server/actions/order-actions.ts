@@ -13,6 +13,7 @@ import {
   releaseExpiredReservations,
   reserveStock,
 } from "@/server/services/inventory-service";
+import { recordCouponUse } from "@/server/services/coupon-service";
 import { nextOrderNumber } from "@/server/services/order-service";
 import { quoteCart } from "@/server/services/pricing-service";
 
@@ -68,6 +69,7 @@ export async function createOrder(
       comuna: data.comuna,
       shippingRateId: data.shippingRateId,
       couponCode: data.couponCode,
+      customerEmail: data.email,
     });
 
     if (quote.isEmpty) {
@@ -86,6 +88,13 @@ export async function createOrder(
 
     const rut = normalizeRut(data.rut);
     const payableLines = quote.lines.filter((l) => l.available);
+
+    const coupon = quote.appliedCoupon
+      ? await db.coupon.findUnique({
+          where: { code: quote.appliedCoupon.code },
+          select: { id: true },
+        })
+      : null;
 
     // 3. Transacción: reserva de stock + creación del pedido.
     const order = await db.$transaction(async (tx) => {
@@ -144,6 +153,7 @@ export async function createOrder(
           discountTotal: quote.discountTotal,
           shippingTotal: quote.shippingTotal,
           grandTotal: quote.grandTotal,
+          couponId: coupon?.id ?? null,
           couponCode: quote.appliedCoupon?.code ?? null,
           customerNote: data.customerNote ?? null,
           expiresAt: new Date(Date.now() + 15 * 60 * 1000),
@@ -184,6 +194,15 @@ export async function createOrder(
           productName: l.productName,
         })),
       );
+
+      if (coupon && quote.appliedCoupon) {
+        await recordCouponUse(tx, {
+          couponId: coupon.id,
+          orderId: created.id,
+          customerEmail: data.email,
+          amountDiscounted: quote.appliedCoupon.discount,
+        });
+      }
 
       // Vacía el carrito: el pedido ya guarda el snapshot.
       await tx.cartItem.deleteMany({ where: { cart: { token: cartToken } } });

@@ -1,8 +1,9 @@
 import "server-only";
 
-import { discountPercent, toCLP } from "@/lib/money";
+import { discountPercent } from "@/lib/money";
 import { db } from "@/server/db";
 import type { Prisma } from "@/generated/prisma/client";
+import { evaluateCoupon } from "@/server/services/coupon-service";
 import {
   getShippingOptions,
   resolveShippingRate,
@@ -48,6 +49,7 @@ export type Quote = {
   shippingOptions: ShippingOption[];
   selectedShipping: ShippingOption | null;
   appliedCoupon: AppliedCoupon | null;
+  couponError: string | null;
   fulfillmentMethod: "SHIPPING" | "PICKUP";
   hasUnavailableLines: boolean;
   isEmpty: boolean;
@@ -60,6 +62,7 @@ export type QuoteInput = {
   comuna?: string;
   shippingRateId?: string;
   couponCode?: string;
+  customerEmail?: string;
 };
 
 const cartInclude = {
@@ -105,6 +108,7 @@ function emptyQuote(fulfillmentMethod: "SHIPPING" | "PICKUP"): Quote {
     shippingOptions: [],
     selectedShipping: null,
     appliedCoupon: null,
+    couponError: null,
     fulfillmentMethod,
     hasUnavailableLines: false,
     isEmpty: true,
@@ -158,35 +162,30 @@ export async function quoteCart(input: QuoteInput): Promise<Quote> {
   const subtotal = payableLines.reduce((a, l) => a + l.lineTotal, 0);
   const itemCount = payableLines.reduce((a, l) => a + l.quantity, 0);
 
-  // --- Cupón (validación básica; reglas completas en la Fase 10) ---
+  // --- Cupón ---
   let appliedCoupon: AppliedCoupon | null = null;
+  let couponError: string | null = null;
   let discountTotal = 0;
   let freeShipping = false;
   if (input.couponCode) {
-    const coupon = await db.coupon.findUnique({
-      where: { code: input.couponCode.toUpperCase().trim() },
+    const evaluation = await evaluateCoupon(input.couponCode, {
+      subtotal,
+      lines: payableLines.map((l) => ({
+        productId: l.productId,
+        lineTotal: l.lineTotal,
+      })),
+      customerEmail: input.customerEmail,
     });
-    const now = new Date();
-    const valid =
-      coupon &&
-      coupon.isActive &&
-      (!coupon.startsAt || coupon.startsAt <= now) &&
-      (!coupon.endsAt || coupon.endsAt >= now) &&
-      (!coupon.minSubtotal || subtotal >= coupon.minSubtotal) &&
-      (!coupon.maxUses || coupon.usedCount < coupon.maxUses);
-    if (coupon && valid) {
-      if (coupon.type === "PERCENT") {
-        discountTotal = toCLP((subtotal * Math.min(coupon.value, 100)) / 100);
-      } else if (coupon.type === "FIXED") {
-        discountTotal = Math.min(coupon.value, subtotal);
-      } else {
-        freeShipping = true;
-      }
+    if (evaluation.valid) {
+      discountTotal = evaluation.discount;
+      freeShipping = evaluation.freeShipping;
       appliedCoupon = {
-        code: coupon.code,
-        type: coupon.type,
+        code: evaluation.coupon.code,
+        type: evaluation.coupon.type,
         discount: discountTotal,
       };
+    } else {
+      couponError = evaluation.reason;
     }
   }
 
@@ -245,6 +244,7 @@ export async function quoteCart(input: QuoteInput): Promise<Quote> {
     shippingOptions,
     selectedShipping,
     appliedCoupon,
+    couponError,
     fulfillmentMethod: input.fulfillmentMethod,
     hasUnavailableLines: lines.some((l) => !l.available),
     isEmpty: payableLines.length === 0,
