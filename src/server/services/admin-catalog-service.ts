@@ -114,6 +114,7 @@ export async function getAdminProduct(id: string) {
           attributeValues: {
             include: { attributeValue: true, attribute: true },
           },
+          _count: { select: { orderItems: true } },
         },
       },
       attributes: {

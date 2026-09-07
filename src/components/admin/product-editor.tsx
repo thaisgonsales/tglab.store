@@ -9,6 +9,15 @@ import type { z } from "zod";
 
 import { PageHeader } from "@/components/admin/page-header";
 import { MediaManager, type MediaItem } from "@/components/admin/media-manager";
+import {
+  VariantsSection,
+  type AttributeOption,
+  type VariantRow,
+} from "@/components/admin/variants-section";
+import {
+  CustomFieldsSection,
+  type CustomFieldRow,
+} from "@/components/admin/custom-fields-section";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,10 +69,18 @@ export function ProductEditor({
   product,
   media,
   categories,
+  allAttributes,
+  assignedAttributeIds,
+  variants,
+  customFields,
 }: {
   product: ProductData;
   media: MediaItem[];
   categories: { id: string; label: string; depth: number }[];
+  allAttributes: AttributeOption[];
+  assignedAttributeIds: string[];
+  variants: VariantRow[];
+  customFields: CustomFieldRow[];
 }) {
   const router = useRouter();
 
@@ -297,11 +314,37 @@ export function ProductEditor({
             <CardContent>
               <p className="text-foreground-muted text-sm">
                 Este producto tiene variantes. El precio y el stock se editan
-                por variante en la sección de variantes (Fase 4).
+                por combinación, más abajo.
               </p>
             </CardContent>
           </Card>
         )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Variantes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <VariantsSection
+              productId={product.id}
+              allAttributes={allAttributes}
+              assignedAttributeIds={assignedAttributeIds}
+              variants={variants}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Campos personalizados</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CustomFieldsSection
+              productId={product.id}
+              initial={customFields}
+            />
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
