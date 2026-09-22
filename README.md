@@ -121,7 +121,12 @@ Para activarla (sandbox):
 datos (configurados en `/admin/configuracion`) y el equipo confirma el pago
 desde `/admin/pedidos` (ahí se descuenta el stock).
 
-En ambos casos: el stock se **reserva** al crear el pedido y solo se
+**Webpay Plus (Transbank)** — integración mediante el SDK oficial. Solo aparece
+cuando `TRANSBANK_COMMERCE_CODE` y `TRANSBANK_API_KEY` están configurados. El
+retorno confirma la transacción directamente con Transbank y vuelve a validar
+el monto del pedido antes de descontar stock.
+
+En todos los casos: el stock se **reserva** al crear el pedido y solo se
 **descuenta** al confirmarse el pago. Nunca se almacenan datos de tarjeta.
 
 ## Emails transaccionales
@@ -196,10 +201,10 @@ Pendiente (Fase 15). Estrategia definida en `docs/ARQUITECTURA.md` §17.
 | **F9 — Pedidos admin + seguimiento + emails** | ✅ completada                 |
 | **F10 — Cupones**                        | ✅ completada                      |
 | **F11 — Solicitudes personalizadas**     | ✅ completada                      |
-| F12 — Cuentas de cliente                | ⏳ pendiente (opcional en la arquitectura) |
+| **F12 — Cuentas de cliente**             | ✅ cuentas, seguridad, direcciones, pedidos, favoritos y reseñas verificadas |
 | **F13 — SEO + analítica + legales**     | ✅ completada                      |
-| F14 — Hardening + testing + performance | ⏳ pendiente                       |
-| F15 — Deploy + backups + boleta + docs  | ⏳ pendiente                       |
+| **F14 — Hardening + testing + performance** | ✅ CSP, consentimiento, Sentry opcional, rate limits, CI, unitarias, integración y E2E |
+| **F15 — Deploy + backups + boleta + docs** | 🟡 Railway preparado; falta crear servicios/dominio, activar backups y credenciales; boleta manual disponible |
 
 ### Desviaciones respecto a `docs/ARQUITECTURA.md`
 
@@ -215,3 +220,9 @@ actuales"):
 - **PostgreSQL local dedicado** en `.devdb/` en vez de Docker (no disponible) o
   `prisma dev` (inestable bajo carga concurrente).
 - **Better Auth** con control de acceso por roles `owner` / `staff`.
+
+## Accesos de clientes y personal
+
+Los clientes se registran en `/cuenta/registro` e ingresan en `/cuenta/login`. El personal ingresa en `/admin/login`; el propietario gestiona accesos en `/admin/equipo`.
+
+Ver [Cuentas: configuración, correos y pruebas](docs/CUENTAS.md). Recuperación y verificación requieren `RESEND_API_KEY` y un remitente autorizado; sin credenciales se muestran desactivadas, sin simular envíos.

@@ -27,6 +27,12 @@ test("checkout de invitado con retiro crea un pedido", async ({ page }) => {
   // Retiro está preseleccionado (pickupEnabled en el seed)
   await page.getByRole("button", { name: "Retiro" }).click();
 
+  // Las condiciones son obligatorias y se validan antes de crear el pedido.
+  await page.getByRole("button", { name: /Continuar al pago/i }).click();
+  await expect(
+    page.getByText("Debes aceptar los términos y la política de privacidad"),
+  ).toBeVisible();
+  await page.getByRole("checkbox", { name: /Acepto los términos/i }).check();
   await page.getByRole("button", { name: /Continuar al pago/i }).click();
 
   // Redirige a /checkout/pago/TG-XXXXXX

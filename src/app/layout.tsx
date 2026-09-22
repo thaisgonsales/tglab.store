@@ -44,12 +44,10 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6efdf" },
-    { media: "(prefers-color-scheme: dark)", color: "#211a19" },
-  ],
-};
+export async function generateViewport(): Promise<Viewport> {
+  const brand = await getSettingsGroup("brand");
+  return { themeColor: brand.colorBackground, colorScheme: "light" };
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const brand = await getSettingsGroup("brand");
@@ -62,7 +60,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <Providers>{children}</Providers>
-        <Analytics />
+        <Analytics
+          ga4Id={publicEnv.ga4Id}
+          metaPixelId={publicEnv.metaPixelId}
+        />
       </body>
     </html>
   );

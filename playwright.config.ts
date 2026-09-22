@@ -23,6 +23,7 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["Pixel 7"] } },
   ],
   webServer: {
+    env: { BETTER_AUTH_URL: baseURL, NEXT_PUBLIC_SITE_URL: baseURL, RESEND_API_KEY: "", APP_ENV: "test" },
     command: `npm run build && npm run start -- --port ${PORT}`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,

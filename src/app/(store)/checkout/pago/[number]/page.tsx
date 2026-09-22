@@ -8,6 +8,7 @@ import { PurchaseTracker } from "@/components/store/purchase-tracker";
 import { formatCLP } from "@/lib/money";
 import { formatDateTime } from "@/lib/datetime";
 import { availablePaymentMethods } from "@/server/payments/registry";
+import { canAccessOrder } from "@/server/services/order-access-service";
 import { getOrderByNumber } from "@/server/services/order-service";
 import { getSettingsGroup } from "@/server/services/settings-service";
 
@@ -26,7 +27,7 @@ export default async function PaymentPage({
   const { number } = await params;
   const sp = await searchParams;
   const order = await getOrderByNumber(number);
-  if (!order) notFound();
+  if (!order || !await canAccessOrder(order)) notFound();
 
   const fromMercadoPago = sp.mp === "1";
 

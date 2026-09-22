@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminUserMenu } from "@/components/admin/admin-user-menu";
+import { getSettingsGroup } from "@/server/services/settings-service";
 import { requireStaff } from "@/server/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ export default async function AdminAppLayout({
   children: ReactNode;
 }) {
   const session = await requireStaff();
+  const account = await getSettingsGroup("account");
 
   return (
     <div className="bg-background min-h-screen">
@@ -30,10 +32,11 @@ export default async function AdminAppLayout({
         />
       </header>
 
+      <details className="border-b md:hidden"><summary className="cursor-pointer px-4 py-3 text-sm">{account.admin}</summary><AdminSidebar owner={session.user.role === "owner"} labels={account} /></details>
       <div className="mx-auto flex max-w-7xl">
         <aside className="border-border hidden w-56 shrink-0 border-r md:block print:!hidden">
           <div className="sticky top-14">
-            <AdminSidebar />
+            <AdminSidebar owner={session.user.role === "owner"} labels={account} />
           </div>
         </aside>
         <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>

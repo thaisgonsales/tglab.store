@@ -169,6 +169,13 @@ export default async function AdminOrderDetailPage({
           trackingNumber: order.trackingNumber ?? "",
           trackingUrl: order.trackingUrl ?? "",
           internalNotes: order.internalNotes ?? "",
+          document: order.documents[0]
+            ? {
+                id: order.documents[0].id,
+                status: order.documents[0].status,
+                folio: order.documents[0].folio ?? "",
+              }
+            : null,
         }}
       />
 
@@ -233,8 +240,11 @@ export default async function AdminOrderDetailPage({
                 </p>
               ))}
               <p className="text-foreground-muted mt-1 text-xs">
-                La emisión de boleta electrónica se conecta a un proveedor en
-                una fase posterior.
+                {order.documents.some(
+                  (document) => document.status === "ISSUED",
+                )
+                  ? "Emisión registrada en el historial del pedido."
+                  : "Pendiente de emisión manual en el portal del SII."}
               </p>
             </div>
           )}

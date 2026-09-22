@@ -33,6 +33,9 @@ const baseObject = z.object({
   couponCode: z.string().trim().max(40).optional(),
   customerNote: z.string().trim().max(500).optional(),
   createAccount: z.boolean().default(false),
+  acceptedTerms: z.boolean().refine((value) => value, {
+    message: "Debes aceptar los términos y la política de privacidad",
+  }),
 });
 
 const crossValidate = (

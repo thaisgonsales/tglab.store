@@ -42,14 +42,15 @@ export const getSettingsGroup = cache(
 
 export const getAllSettings = cache(async (): Promise<Settings> => {
   try {
-    const [brand, home, contact, commerce, legal] = await Promise.all([
+    const [account, brand, home, contact, commerce, legal] = await Promise.all([
+      loadGroup("account"),
       loadGroup("brand"),
       loadGroup("home"),
       loadGroup("contact"),
       loadGroup("commerce"),
       loadGroup("legal"),
     ]);
-    return { brand, home, contact, commerce, legal };
+    return { account, brand, home, contact, commerce, legal };
   } catch {
     // BD no disponible (p. ej. durante `next build` sin conexión): usar defaults.
     return allDefaults();

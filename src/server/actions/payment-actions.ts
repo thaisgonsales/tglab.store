@@ -7,6 +7,7 @@ import { z } from "zod";
 import { ActionError, staffAction } from "@/server/auth/action-guard";
 import type { ActionResult } from "@/server/auth/action-guard";
 import { db } from "@/server/db";
+import { canAccessOrder } from "@/server/services/order-access-service";
 import { consumeReservations } from "@/server/services/inventory-service";
 import { MercadoPagoProvider } from "@/server/payments/mercadopago";
 import { applyProviderPayment } from "@/server/payments/payment-service";
@@ -39,13 +40,14 @@ export async function startPayment(
     select: {
       id: true,
       number: true,
+      accountId: true,
       grandTotal: true,
       email: true,
       paymentStatus: true,
       expiresAt: true,
     },
   });
-  if (!order) return { ok: false, error: "Pedido no encontrado." };
+  if (!order || !await canAccessOrder(order)) return { ok: false, error: "Pedido no encontrado." };
   if (order.paymentStatus === "PAID") {
     return { ok: false, error: "Este pedido ya está pagado." };
   }
@@ -104,6 +106,8 @@ export async function syncMercadoPagoReturn(
   const parsed = syncSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos." };
 
+  const accessibleOrder = await db.order.findUnique({ where: { number: parsed.data.orderNumber.toUpperCase().trim() }, select: { id: true, accountId: true } });
+  if (!accessibleOrder || !await canAccessOrder(accessibleOrder)) return { ok: false, error: "Pedido no encontrado." };
   const provider = new MercadoPagoProvider();
   if (!provider.isConfigured() || !parsed.data.paymentId) {
     const order = await db.order.findUnique({

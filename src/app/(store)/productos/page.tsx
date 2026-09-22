@@ -11,7 +11,8 @@ import {
 
 export const metadata: Metadata = {
   title: "Productos",
-  description: "Catálogo de productos TG LAB fabricados mediante impresión 3D.",
+  description:
+    "Descubre el catálogo de productos TG LAB para decorar, organizar y disfrutar tus espacios.",
 };
 
 type SearchParams = Record<string, string | string[] | undefined>;

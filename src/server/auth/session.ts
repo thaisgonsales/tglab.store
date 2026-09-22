@@ -16,6 +16,7 @@ export async function getStaffSession(): Promise<StaffSession | null> {
   if (!session) return null;
   if (session.user.isActive === false) return null;
   if (session.user.banned) return null;
+  if (!["owner", "staff"].includes(session.user.role ?? "")) return null;
   return session as StaffSession;
 }
 

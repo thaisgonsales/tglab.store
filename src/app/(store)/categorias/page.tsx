@@ -1,65 +1,81 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 
-import { db } from "@/server/db";
+import { listStoreCategories } from "@/server/services/catalog-service";
 
 export const metadata: Metadata = { title: "Categorías" };
 
-async function getCategories() {
-  try {
-    return await db.category.findMany({
-      where: { isActive: true, parentId: null },
-      orderBy: { position: "asc" },
-      include: {
-        children: {
-          where: { isActive: true },
-          orderBy: { position: "asc" },
-        },
-      },
-    });
-  } catch {
-    return [];
-  }
-}
-
 export default async function CategoriesPage() {
-  const categories = await getCategories();
+  const categories = await listStoreCategories();
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Categorías</h1>
+    <div className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
+      <p className="text-brand text-sm font-semibold tracking-[.16em] uppercase">
+        Explora TG LAB
+      </p>
+      <h1 className="mt-2 text-4xl font-semibold tracking-tight">
+        Encuentra tu próximo favorito
+      </h1>
+      <p className="text-foreground-muted mt-3 max-w-2xl">
+        Decoración, organización, accesorios y diseños para hacer cada espacio
+        más tuyo.
+      </p>
 
       {categories.length === 0 ? (
         <p className="text-foreground-muted mt-6 text-sm">
-          Todavía no hay categorías. Se crean desde el panel de administración.
+          Estamos preparando nuevas colecciones para ti.
         </p>
       ) : (
-        <ul className="mt-6 grid gap-4 sm:grid-cols-2">
+        <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((cat) => (
             <li
               key={cat.id}
-              className="rounded-card border-border bg-surface border p-4"
+              className="border-border bg-surface overflow-hidden rounded-[1.25rem] border"
             >
               <Link
                 href={`/categoria/${cat.slug}`}
-                className="hover:text-brand font-medium"
+                className="bg-surface-muted relative block aspect-[16/9]"
               >
-                {cat.name}
+                {cat.imageUrl ? (
+                  <Image
+                    src={cat.imageUrl}
+                    alt={cat.name}
+                    fill
+                    sizes="(max-width: 640px) 100vw, 33vw"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(239,157,104,.55),transparent_40%),linear-gradient(145deg,#eadbc5,#d7b7c6)]" />
+                )}
               </Link>
-              {cat.children.length > 0 && (
-                <ul className="text-foreground-muted mt-2 space-y-1 text-sm">
-                  {cat.children.map((child) => (
-                    <li key={child.id}>
-                      <Link
-                        href={`/categoria/${child.slug}`}
-                        className="hover:text-foreground"
-                      >
-                        {child.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <div className="p-5">
+                <Link
+                  href={`/categoria/${cat.slug}`}
+                  className="hover:text-brand font-medium"
+                >
+                  {cat.name}
+                </Link>
+                {cat.description && (
+                  <p className="text-foreground-muted mt-2 line-clamp-2 text-sm">
+                    {cat.description}
+                  </p>
+                )}
+                {cat.children.length > 0 && (
+                  <ul className="text-foreground-muted mt-2 space-y-1 text-sm">
+                    {cat.children.map((child) => (
+                      <li key={child.id}>
+                        <Link
+                          href={`/categoria/${child.slug}`}
+                          className="hover:text-foreground"
+                        >
+                          {child.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </li>
           ))}
         </ul>

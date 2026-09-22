@@ -2,10 +2,12 @@ import "server-only";
 
 import { BankTransferProvider } from "./bank-transfer";
 import { MercadoPagoProvider } from "./mercadopago";
+import { WebpayProvider } from "./webpay";
 import type { PaymentMethodInfo, PaymentProvider } from "./types";
 
 const PROVIDERS: PaymentProvider[] = [
   new MercadoPagoProvider(),
+  new WebpayProvider(),
   new BankTransferProvider(),
 ];
 

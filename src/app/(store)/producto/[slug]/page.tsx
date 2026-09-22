@@ -3,10 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { JsonLd } from "@/components/seo/json-ld";
+import { RefreshCw, ShieldCheck, Truck } from "lucide-react";
 import { ProductCard } from "@/components/store/product-card";
 import { ProductGallery } from "@/components/store/product-gallery";
 import { ProductPurchase } from "@/components/store/product-purchase";
 import { WhatsappProductButton } from "@/components/store/whatsapp-product-button";
+import { FavoriteButton } from "@/components/store/favorite-button";
 import {
   DEFAULT_LAST_UNITS_THRESHOLD,
   DEFAULT_LOW_STOCK_THRESHOLD,
@@ -19,6 +21,11 @@ import {
   getRelatedProducts,
 } from "@/server/services/catalog-service";
 import { getSettingsGroup } from "@/server/services/settings-service";
+import { getCustomerSession } from "@/server/auth/customer-session";
+import {
+  isProductFavorite,
+  listPublishedReviews,
+} from "@/server/services/engagement-service";
 
 type Params = { slug: string };
 
@@ -61,10 +68,15 @@ export default async function ProductPage({
   const product = await getPublishedProductBySlug(slug);
   if (!product) notFound();
 
-  const [commerce, contact] = await Promise.all([
+  const [commerce, contact, session, reviewData] = await Promise.all([
     getSettingsGroup("commerce"),
     getSettingsGroup("contact"),
+    getCustomerSession(),
+    listPublishedReviews(product.id),
   ]);
+  const favorite = session
+    ? await isProductFavorite(session.user.id, product.id)
+    : false;
 
   const priceSummary = summarizePrice(product.variants);
   const categoryIds = product.categories.map((c) => c.categoryId);
@@ -238,6 +250,14 @@ export default async function ProductPage({
               />
             </div>
           )}
+          {session && (
+            <div className="mt-3">
+              <FavoriteButton
+                productId={product.id}
+                initialFavorite={favorite}
+              />
+            </div>
+          )}
 
           <dl className="border-border mt-6 space-y-1 border-t pt-4 text-sm">
             {product.material && (
@@ -262,6 +282,64 @@ export default async function ProductPage({
         </section>
       )}
 
+      <section className="mt-10 grid gap-4 sm:grid-cols-3">
+        <div className="bg-surface rounded-card border p-5">
+          <Truck className="text-brand size-5" />
+          <h2 className="mt-3 text-sm font-semibold">Despacho y retiro</h2>
+          <p className="text-foreground-muted mt-1 text-sm">
+            {product.allowsShipping
+              ? "Disponible con despacho según cobertura."
+              : "Este producto no admite despacho."}{" "}
+            {product.allowsPickup && "También puedes coordinar retiro."}
+          </p>
+        </div>
+        <div className="bg-surface rounded-card border p-5">
+          <RefreshCw className="text-brand size-5" />
+          <h2 className="mt-3 text-sm font-semibold">Cambios y devoluciones</h2>
+          <p className="text-foreground-muted mt-1 text-sm">
+            Revisa las condiciones aplicables antes de comprar.
+          </p>
+          <Link
+            href="/cambios-devoluciones"
+            className="text-brand mt-2 inline-block text-sm font-medium"
+          >
+            Ver condiciones →
+          </Link>
+        </div>
+        <div className="bg-surface rounded-card border p-5">
+          <ShieldCheck className="text-brand size-5" />
+          <h2 className="mt-3 text-sm font-semibold">Compra con confianza</h2>
+          <p className="text-foreground-muted mt-1 text-sm">
+            Precios finales con IVA incluido y stock validado por nuestro
+            sistema.
+          </p>
+        </div>
+      </section>
+
+      <section className="mt-10 max-w-3xl">
+        <h2 className="text-lg font-semibold">Preguntas frecuentes</h2>
+        <div className="mt-4 space-y-3">
+          <details className="bg-surface rounded-card border p-4">
+            <summary className="cursor-pointer font-medium">
+              ¿Cuándo estará listo mi pedido?
+            </summary>
+            <p className="text-foreground-muted mt-3 text-sm">
+              El plazo depende del producto y la forma de entrega. Te
+              informaremos el avance mediante el seguimiento de tu pedido.
+            </p>
+          </details>
+          <details className="bg-surface rounded-card border p-4">
+            <summary className="cursor-pointer font-medium">
+              ¿Puedo pedir una versión personalizada?
+            </summary>
+            <p className="text-foreground-muted mt-3 text-sm">
+              Sí. Envíanos tu idea desde la sección de personalizados y
+              revisaremos contigo los detalles.
+            </p>
+          </details>
+        </div>
+      </section>
+
       {related.length > 0 && (
         <section className="mt-14">
           <h2 className="mb-4 text-lg font-semibold">
@@ -274,6 +352,58 @@ export default async function ProductPage({
           </div>
         </section>
       )}
+
+      <section className="mt-14">
+        <div className="flex items-end justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Reseñas verificadas</h2>
+            <p className="text-foreground-muted mt-1 text-sm">
+              Opiniones de clientes que compraron este producto.
+            </p>
+          </div>
+          {reviewData.count > 0 && (
+            <p className="font-semibold">
+              ★ {reviewData.average.toFixed(1)} · {reviewData.count}
+            </p>
+          )}
+        </div>
+        {reviewData.reviews.length ? (
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            {reviewData.reviews.map((review) => (
+              <article
+                key={review.id}
+                className="bg-surface rounded-card border p-5"
+              >
+                <p
+                  className="text-brand"
+                  aria-label={`${review.rating} de 5 estrellas`}
+                >
+                  {"★".repeat(review.rating)}
+                  <span className="text-border">
+                    {"★".repeat(5 - review.rating)}
+                  </span>
+                </p>
+                {review.title && (
+                  <h3 className="mt-2 font-semibold">{review.title}</h3>
+                )}
+                <p className="text-foreground-muted mt-2 text-sm leading-relaxed">
+                  {review.content}
+                </p>
+                <p className="mt-3 text-xs font-medium">
+                  {review.account.firstName ||
+                    review.account.name.split(" ")[0]}{" "}
+                  · Compra verificada
+                </p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="text-foreground-muted rounded-card mt-5 border border-dashed p-5 text-sm">
+            Este producto todavía no tiene reseñas. Las opiniones solo pueden
+            publicarlas clientes con una compra pagada.
+          </p>
+        )}
+      </section>
 
       <p className="text-foreground-muted mt-10 text-xs">
         Precio de referencia desde {formatCLP(priceSummary.from)} · IVA

@@ -2,9 +2,11 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import type { AccountCopy } from "@/config/account-settings";
 import type { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -37,10 +39,16 @@ function getIdempotencyKey(): string {
 }
 
 export function CheckoutForm({
+  accountDefaults,
+  savedAddresses = [],
+  accountCopy,
   initialQuote,
   shippingEnabled,
   pickup,
 }: {
+  accountDefaults?: Partial<CheckoutFormValues>;
+  savedAddresses?: { id: string; street: string; number: string | null; apartment: string | null; region: string; comuna: string; notes: string | null }[];
+  accountCopy: AccountCopy;
   initialQuote: Quote;
   shippingEnabled: boolean;
   pickup: {
@@ -83,6 +91,8 @@ export function CheckoutForm({
     defaultValues: {
       fulfillmentMethod: pickup.enabled ? "PICKUP" : "SHIPPING",
       createAccount: false,
+      acceptedTerms: false,
+      ...accountDefaults,
     },
   });
 
@@ -153,6 +163,14 @@ export function CheckoutForm({
       noValidate
     >
       <div className="space-y-8">
+        {savedAddresses.length > 0 && <div className="space-y-2"><Label htmlFor="saved-address">{accountCopy.chooseAddress}</Label><select id="saved-address" className="bg-surface h-10 w-full rounded-md border px-3 text-sm" defaultValue="" onChange={(event) => {
+          const address = savedAddresses.find((a) => a.id === event.target.value);
+          if (!address) return;
+          setValue("region", address.region); setValue("comuna", address.comuna);
+          setValue("street", address.street); setValue("number", address.number ?? "");
+          setValue("apartment", address.apartment ?? ""); setValue("addressNotes", address.notes ?? "");
+          setValue("shippingRateId", "");
+        }}><option value="">{accountCopy.manualAddress}</option>{savedAddresses.map((a) => <option key={a.id} value={a.id}>{a.street} {a.number}, {a.comuna}</option>)}</select></div>}
         {/* Contacto */}
         <section className="rounded-card border-border bg-surface border p-5">
           <h2 className="mb-4 text-base font-semibold">Tus datos</h2>
@@ -392,6 +410,30 @@ export function CheckoutForm({
         {serverError && (
           <p className="mt-3 rounded-md bg-red-50 p-2 text-sm text-red-700">
             {serverError}
+          </p>
+        )}
+
+        <label className="mt-4 flex items-start gap-2 text-xs">
+          <input
+            type="checkbox"
+            className="border-border mt-0.5 size-4 rounded"
+            {...register("acceptedTerms")}
+          />
+          <span className="text-foreground-muted">
+            Acepto los {" "}
+            <Link className="text-brand underline" href="/terminos" target="_blank">
+              términos y condiciones
+            </Link>{" "}
+            y la {" "}
+            <Link className="text-brand underline" href="/privacidad" target="_blank">
+              política de privacidad
+            </Link>
+            .
+          </span>
+        </label>
+        {errors.acceptedTerms && (
+          <p className="mt-1 text-xs text-red-600">
+            {errors.acceptedTerms.message}
           </p>
         )}
 

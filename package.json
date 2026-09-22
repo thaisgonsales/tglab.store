@@ -31,7 +31,8 @@
     "db:studio": "dotenv -e .env -- prisma studio",
     "db:seed": "dotenv -e .env -- tsx --conditions=react-server prisma/seed.ts",
     "db:reset": "dotenv -e .env -- prisma migrate reset",
-    "admin:create": "dotenv -e .env -- tsx --conditions=react-server scripts/create-admin.ts"
+    "admin:create": "dotenv -e .env -- tsx --conditions=react-server scripts/create-admin.ts",
+    "deploy:check": "tsx scripts/check-production-env.ts"
   },
   "prisma": {
     "seed": "tsx --conditions=react-server prisma/seed.ts"
@@ -62,6 +63,7 @@
     "@radix-ui/react-tabs": "^1.1.21",
     "@radix-ui/react-tooltip": "^1.2.16",
     "@react-email/components": "^1.0.12",
+    "@sentry/nextjs": "^10.75.2",
     "@tanstack/react-query": "^5.102.8",
     "better-auth": "^1.7.3",
     "class-variance-authority": "^0.7.1",
@@ -79,6 +81,7 @@
     "sharp": "^0.35.4",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
+    "transbank-sdk": "^6.1.1",
     "zod": "^4.5.4"
   },
   "devDependencies": {

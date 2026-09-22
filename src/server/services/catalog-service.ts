@@ -29,7 +29,7 @@ const cardSelect = {
   },
   variants: {
     where: { isActive: true },
-    select: { price: true, compareAtPrice: true, stock: true },
+    select: { id: true, price: true, compareAtPrice: true, stock: true },
   },
 } satisfies Prisma.ProductSelect;
 
@@ -105,6 +105,30 @@ export type CatalogParams = {
   page?: number;
   perPage?: number;
 };
+
+export const listStoreCategories = cache(async (take?: number) => {
+  try {
+    return await db.category.findMany({
+      where: { isActive: true, parentId: null },
+      orderBy: { position: "asc" },
+      take,
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        imageUrl: true,
+        children: {
+          where: { isActive: true },
+          orderBy: { position: "asc" },
+          select: { id: true, name: true, slug: true },
+        },
+      },
+    });
+  } catch {
+    return [];
+  }
+});
 
 export async function searchCatalog(params: CatalogParams) {
   const page = Math.max(1, params.page ?? 1);

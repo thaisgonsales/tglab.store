@@ -16,6 +16,7 @@ import {
   cancelOrder,
   changeOrderStatus,
   markOrderRefunded,
+  recordManualBoleta,
   updateOrderTracking,
 } from "@/server/actions/order-admin-actions";
 
@@ -39,6 +40,7 @@ type Order = {
   trackingNumber: string;
   trackingUrl: string;
   internalNotes: string;
+  document: { id: string; status: string; folio: string } | null;
 };
 
 export function OrderActions({ order }: { order: Order }) {
@@ -51,6 +53,10 @@ export function OrderActions({ order }: { order: Order }) {
     amount: "",
     reference: "",
     restock: true,
+  });
+  const [boleta, setBoleta] = useState({
+    folio: order.document?.folio ?? "",
+    issuedAt: new Date().toISOString().slice(0, 16),
   });
   const [tracking, setTracking] = useState({
     carrier: order.carrier,
@@ -81,6 +87,10 @@ export function OrderActions({ order }: { order: Order }) {
   });
   const doRefund = useAction(markOrderRefunded, {
     successMessage: "Reembolso registrado",
+    onSuccess: () => router.refresh(),
+  });
+  const issueBoleta = useAction(recordManualBoleta, {
+    successMessage: "Boleta registrada",
     onSuccess: () => router.refresh(),
   });
 
@@ -178,6 +188,62 @@ export function OrderActions({ order }: { order: Order }) {
             </div>
           </div>
         )}
+
+        {order.paymentStatus === "PAID" &&
+          order.document &&
+          order.document.status !== "ISSUED" && (
+            <div className="border-border rounded-md border p-3">
+              <p className="text-sm font-medium">Registrar boleta del SII</p>
+              <p className="text-foreground-muted text-xs">
+                Emite primero la boleta en el portal del SII y registra aquí su
+                folio. Esta acción no emite el documento automáticamente.
+              </p>
+              <div className="mt-2 flex flex-wrap items-end gap-2">
+                <div>
+                  <Label className="text-xs">Folio</Label>
+                  <Input
+                    className="w-40"
+                    value={boleta.folio}
+                    onChange={(event) =>
+                      setBoleta({ ...boleta, folio: event.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Fecha de emisión</Label>
+                  <Input
+                    className="w-52"
+                    type="datetime-local"
+                    value={boleta.issuedAt}
+                    onChange={(event) =>
+                      setBoleta({ ...boleta, issuedAt: event.target.value })
+                    }
+                  />
+                </div>
+                <ConfirmDialog
+                  title="Registrar boleta emitida"
+                  description="Confirma que la boleta ya fue emitida realmente en el portal del SII."
+                  confirmLabel="Registrar folio"
+                  onConfirm={() =>
+                    issueBoleta.run({
+                      orderId: order.id,
+                      documentId: order.document!.id,
+                      folio: boleta.folio,
+                      issuedAt: boleta.issuedAt,
+                    })
+                  }
+                  trigger={
+                    <Button
+                      size="sm"
+                      disabled={!boleta.folio.trim() || issueBoleta.isPending}
+                    >
+                      Registrar boleta
+                    </Button>
+                  }
+                />
+              </div>
+            </div>
+          )}
 
         <div className="border-border rounded-md border p-3">
           <p className="mb-2 text-sm font-medium">

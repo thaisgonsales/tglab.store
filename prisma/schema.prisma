@@ -6,7 +6,8 @@
 //  - Todo producto tiene >= 1 ProductVariant (el producto "simple" tiene una).
 //  - Los pedidos guardan snapshots: editar/archivar productos no altera historia.
 //  - `User/Session/Account/Verification/TwoFactor` = personal de TG LAB (staff),
-//    NO son los clientes. Los clientes viven en `Customer` (checkout invitado).
+//    Las cuentas de clientes usan CustomerUser y sesiones independientes.
+//    Customer conserva los contactos de compra (incluidos invitados).
 
 generator client {
   provider = "prisma-client"
@@ -137,6 +138,9 @@ model Customer {
 }
 
 model Address {
+  accountId String?
+  account CustomerUser? @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
   id         String    @id @default(cuid())
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
@@ -156,6 +160,7 @@ model Address {
   updatedAt DateTime @updatedAt
 
   @@index([customerId])
+  @@index([accountId])
   @@map("address")
 }
 
@@ -246,6 +251,8 @@ model Product {
   relatedFrom  ProductRelation[]       @relation("RelationFrom")
   relatedTo    ProductRelation[]       @relation("RelationTo")
   orderItems   OrderItem[]
+  favorites    ProductFavorite[]
+  reviews      ProductReview[]
 
   @@index([status, publishedAt])
   @@index([isFeatured])
@@ -543,6 +550,9 @@ enum FulfillmentMethod {
 }
 
 model Order {
+  accountId String?
+  account CustomerUser? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
   id     String @id @default(cuid())
   number String @unique // "TG-000001"
 
@@ -608,6 +618,7 @@ model Order {
   @@index([paymentStatus])
   @@index([createdAt])
   @@index([expiresAt])
+  @@index([accountId, placedAt])
   @@map("order")
 }
 
@@ -663,10 +674,48 @@ model OrderItem {
   lineTotal    Int
 
   customizations OrderItemCustomization[]
+  review ProductReview?
 
   @@index([orderId])
   @@index([productId])
   @@map("order_item")
+}
+
+model ProductFavorite {
+  accountId String
+  account CustomerUser @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  productId String
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([accountId, productId])
+  @@index([productId])
+  @@map("product_favorite")
+}
+
+enum ProductReviewStatus {
+  PUBLISHED
+  HIDDEN
+}
+
+model ProductReview {
+  id String @id @default(cuid())
+  accountId String
+  account CustomerUser @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  productId String
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItemId String @unique
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  rating Int
+  title String?
+  content String
+  status ProductReviewStatus @default(PUBLISHED)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([accountId, productId])
+  @@index([productId, status, createdAt])
+  @@map("product_review")
 }
 
 model OrderItemCustomization {
@@ -963,4 +1012,79 @@ model DocumentRecord {
   @@index([orderId])
   @@index([status])
   @@map("document_record")
+}
+
+// Cuentas de clientes: independientes del personal y de contactos invitados.
+model CustomerUser {
+  id String @id
+  name String
+  email String @unique
+  emailVerified Boolean @default(false)
+  image String?
+  firstName String @default("")
+  lastName String @default("")
+  phone String @default("")
+  rut String @default("")
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions CustomerSession[]
+  accounts CustomerAccount[]
+  addresses Address[]
+  orders Order[]
+  favorites ProductFavorite[]
+  reviews ProductReview[]
+  @@map("customer_user")
+}
+
+model CustomerSession {
+  id String @id
+  expiresAt DateTime
+  token String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId String
+  user CustomerUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("customer_session")
+}
+
+model CustomerAccount {
+  id String @id
+  accountId String
+  providerId String
+  userId String
+  user CustomerUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken String?
+  refreshToken String?
+  idToken String?
+  accessTokenExpiresAt DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope String?
+  password String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([userId])
+  @@map("customer_account")
+}
+
+model CustomerVerification {
+  id String @id
+  identifier String
+  value String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([identifier])
+  @@map("customer_verification")
+}
+
+model AuthRateLimit {
+  id String @id
+  key String @unique
+  count Int
+  lastRequest BigInt
+  @@map("auth_rate_limit")
 }

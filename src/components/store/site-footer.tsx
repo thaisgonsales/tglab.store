@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 import { FacebookIcon, InstagramIcon } from "@/components/icons/social";
+import { WhatsappIcon } from "@/components/icons/social";
+import { buildWhatsappUrl } from "@/lib/whatsapp";
 
 import { getAllSettings } from "@/server/services/settings-service";
 
@@ -24,7 +26,9 @@ export async function SiteFooter() {
             <span className="text-brand">TG</span> LAB
           </p>
           <p className="text-foreground-muted mt-2 text-sm">{brand.tagline}</p>
-          <p className="text-foreground-muted mt-2 text-sm">{contact.city}</p>
+          {contact.city && (
+            <p className="text-foreground-muted mt-2 text-sm">{contact.city}</p>
+          )}
         </div>
 
         <div>
@@ -70,7 +74,11 @@ export async function SiteFooter() {
           <h2 className="text-sm font-semibold">Contacto</h2>
           <ul className="text-foreground-muted mt-3 space-y-2 text-sm">
             {contact.email && <li>{contact.email}</li>}
-            {contact.phone && <li>{contact.phone}</li>}
+            <li>
+              <Link href="/cuenta" className="hover:text-foreground">
+                Mi cuenta
+              </Link>
+            </li>
           </ul>
           <div className="mt-3 flex gap-2">
             {contact.instagram && (
@@ -93,6 +101,20 @@ export async function SiteFooter() {
                 className="border-border hover:bg-surface-muted flex size-9 items-center justify-center rounded-md border"
               >
                 <FacebookIcon className="size-4" />
+              </a>
+            )}
+            {contact.whatsapp && (
+              <a
+                href={buildWhatsappUrl(
+                  contact.whatsapp,
+                  "Hola, quisiera consultar por TG LAB.",
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Escríbenos por WhatsApp"
+                className="border-border hover:bg-surface-muted flex size-9 items-center justify-center rounded-md border"
+              >
+                <WhatsappIcon className="size-4" />
               </a>
             )}
           </div>

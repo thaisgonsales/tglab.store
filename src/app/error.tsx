@@ -1,5 +1,6 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 
 export default function Error({
@@ -10,7 +11,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // El logging estructurado (Sentry) se conecta en la fase de hardening.
+    Sentry.captureException(error);
     console.error(error);
   }, [error]);
 

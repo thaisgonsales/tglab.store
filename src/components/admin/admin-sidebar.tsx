@@ -32,12 +32,12 @@ const NAV = [
   { label: "Configuración", href: "/admin/configuracion", icon: Settings },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ owner, labels }: { owner: boolean; labels: { security: string; team: string } }) {
   const pathname = usePathname();
 
   return (
     <nav className="flex flex-col gap-0.5 p-3">
-      {NAV.map((item) => {
+      {[...NAV, { label: labels.security, href: "/admin/seguridad", icon: Settings }, ...(owner ? [{ label: labels.team, href: "/admin/equipo", icon: Users }] : [])].map((item) => {
         const active = item.exact
           ? pathname === item.href
           : pathname.startsWith(item.href);

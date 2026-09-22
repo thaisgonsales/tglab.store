@@ -58,7 +58,7 @@ export default async function CategoryPage({
         },
         variants: {
           where: { isActive: true },
-          select: { price: true, compareAtPrice: true, stock: true },
+          select: { id: true, price: true, compareAtPrice: true, stock: true },
         },
       },
     })

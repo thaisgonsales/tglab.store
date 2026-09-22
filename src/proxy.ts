@@ -12,20 +12,13 @@ import { ADMIN_LOGIN_PATH } from "@/config/constants";
  */
 export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
-  const isLogin = pathname === ADMIN_LOGIN_PATH;
+  const isLogin = [ADMIN_LOGIN_PATH, "/admin/recuperar", "/admin/restablecer"].includes(pathname);
   const cookie = getSessionCookie(request, { cookiePrefix: "tglab_admin" });
 
   if (!cookie && !isLogin) {
     const url = request.nextUrl.clone();
     url.pathname = ADMIN_LOGIN_PATH;
     url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
-  }
-
-  if (cookie && isLogin) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin";
-    url.search = "";
     return NextResponse.redirect(url);
   }
 

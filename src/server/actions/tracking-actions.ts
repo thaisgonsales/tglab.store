@@ -1,8 +1,10 @@
 "use server";
 
+import { headers } from "next/headers";
 import { z } from "zod";
 
 import { formatDateTime } from "@/lib/datetime";
+import { rateLimit } from "@/lib/rate-limit";
 import type { ActionResult } from "@/server/auth/action-guard";
 import { getOrderForTracking } from "@/server/services/order-service";
 
@@ -78,6 +80,22 @@ export async function lookupOrderTracking(
   const parsed = lookupSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: "Ingresa el número de pedido y tu email." };
+  }
+
+  const requestHeaders = await headers();
+  const ip =
+    requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    requestHeaders.get("x-real-ip") ??
+    "unknown";
+  const limit = rateLimit(`tracking:${ip}`, {
+    limit: 20,
+    windowMs: 15 * 60 * 1000,
+  });
+  if (!limit.ok) {
+    return {
+      ok: false,
+      error: "Demasiados intentos. Espera unos minutos antes de continuar.",
+    };
   }
 
   const order = await getOrderForTracking(

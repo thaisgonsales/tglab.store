@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, Search, ShoppingBag, X } from "lucide-react";
+import { Menu, Search, ShoppingBag, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -22,17 +22,28 @@ export function SiteHeader({
   storeName,
   logoUrl,
   cartCount = 0,
+  accountLabel,
+  accountHref,
+  announcement,
 }: {
   storeName: string;
   logoUrl?: string;
   cartCount?: number;
+  accountLabel: string;
+  accountHref: string;
+  announcement?: string;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
   return (
-    <header className="border-border bg-background/85 sticky top-0 z-30 border-b backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
+    <header className="border-border bg-background/90 sticky top-0 z-30 border-b shadow-[0_4px_24px_rgba(58,43,40,.04)] backdrop-blur-xl">
+      {announcement && (
+        <div className="border-brand/15 bg-[#fff1f3] px-4 py-2 text-center text-[11px] font-medium tracking-[.08em] text-[#8f3157] sm:text-xs">
+          <p>{announcement}</p>
+        </div>
+      )}
+      <div className="mx-auto flex h-[4.5rem] max-w-6xl items-center gap-4 px-4">
         <button
           type="button"
           className="md:hidden"
@@ -51,7 +62,7 @@ export function SiteHeader({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={logoUrl} alt={storeName} className="h-7 w-auto" />
           ) : (
-            <span className="text-lg">
+            <span className="text-xl tracking-[-.04em]">
               <span className="text-brand">TG</span> LAB
             </span>
           )}
@@ -73,6 +84,14 @@ export function SiteHeader({
         </nav>
 
         <div className="ml-auto flex items-center gap-1">
+          <Link
+            href={accountHref}
+            aria-label={accountLabel}
+            className="hover:bg-surface-muted flex h-10 items-center justify-center gap-2 rounded-md px-2"
+          >
+            <UserRound className="size-5" />
+            <span className="hidden text-sm lg:inline">{accountLabel}</span>
+          </Link>
           <Link
             href="/productos"
             aria-label="Buscar productos"

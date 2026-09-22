@@ -272,3 +272,63 @@ export async function updateOrderTracking(
     return null;
   });
 }
+
+const manualBoletaSchema = z.object({
+  orderId: z.string().cuid(),
+  documentId: z.string().cuid(),
+  folio: z.string().trim().min(1, "Ingresa el folio").max(80),
+  issuedAt: z.coerce.date(),
+});
+
+/** Registra una boleta que ya fue emitida manualmente en el SII. */
+export async function recordManualBoleta(
+  input: z.input<typeof manualBoletaSchema>,
+) {
+  return staffAction(async (session) => {
+    const data = manualBoletaSchema.parse(input);
+    const document = await db.documentRecord.findFirst({
+      where: {
+        id: data.documentId,
+        orderId: data.orderId,
+        type: "BOLETA",
+      },
+      include: {
+        order: { select: { number: true, paymentStatus: true, status: true } },
+      },
+    });
+    if (!document) throw new ActionError("Documento no encontrado.");
+    if (document.order.paymentStatus !== "PAID") {
+      throw new ActionError(
+        "Solo se puede emitir la boleta de un pedido pagado.",
+      );
+    }
+    if (document.status === "ISSUED") {
+      throw new ActionError("La boleta ya fue registrada como emitida.");
+    }
+
+    await db.$transaction(async (tx) => {
+      await tx.documentRecord.update({
+        where: { id: document.id },
+        data: {
+          status: "ISSUED",
+          folio: data.folio,
+          issuedAt: data.issuedAt,
+          provider: "SII_MANUAL",
+          externalReference: data.folio,
+          errorMessage: null,
+        },
+      });
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: data.orderId,
+          toStatus: document.order.status,
+          note: `Boleta emitida manualmente en SII · folio ${data.folio}.`,
+          adminUserId: session.user.id,
+        },
+      });
+    });
+
+    revalidatePath(`/admin/pedidos/${data.orderId}`);
+    return null;
+  });
+}

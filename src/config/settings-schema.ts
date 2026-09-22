@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { accountSettingsSchema } from "@/config/account-settings";
 
 import {
   DEFAULT_LAST_UNITS_THRESHOLD,
@@ -15,7 +16,13 @@ export const brandSettingsSchema = z.object({
   storeName: z.string().min(1).default("TG LAB"),
   tagline: z
     .string()
-    .default("Accesorios, decoración y productos únicos fabricados en Chiloé."),
+    .default(
+      "Diseño, decoración y detalles únicos para hacer tu espacio especial.",
+    ),
+  announcementEnabled: z.boolean().default(true),
+  announcementText: z
+    .string()
+    .default("Preparamos tu pedido en 2–4 días hábiles 💌"),
   logoUrl: z.string().default(""),
   logoDarkUrl: z.string().default(""),
   faviconUrl: z.string().default(""),
@@ -23,27 +30,54 @@ export const brandSettingsSchema = z.object({
   colorPrimary: z.string().default("#bd527c"),
   colorPrimaryDark: z.string().default("#f2aac6"),
   colorAccent: z.string().default("#ef9d68"),
+  colorBackground: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .default("#eee3d2"),
 });
 
 export const homeSettingsSchema = z.object({
-  heroTitle: z.string().default("Transforma tu espacio con TG LAB"),
+  heroTitle: z.string().default("Transforma tu espacio"),
   heroSubtitle: z
     .string()
     .default(
-      "Accesorios, decoración y productos únicos fabricados en Chiloé mediante impresión 3D.",
+      "Diseños especiales para darle personalidad a cada rincón de tu hogar.",
     ),
   heroPrimaryCtaLabel: z.string().default("Ver productos"),
   heroPrimaryCtaHref: z.string().default("/productos"),
-  heroSecondaryCtaLabel: z.string().default("Explorar novedades"),
-  heroSecondaryCtaHref: z.string().default("/productos?orden=nuevos"),
+  heroSecondaryCtaLabel: z.string().default("Crear algo personalizado"),
+  heroSecondaryCtaHref: z.string().default("/personalizados"),
+  heroTrustLine: z
+    .string()
+    .default("Diseños únicos, atención cercana y despacho a todo Chile."),
+  benefits: z
+    .array(z.object({ title: z.string().min(1), text: z.string().min(1) }))
+    .length(4)
+    .default([
+      { title: "Diseños únicos", text: "Detalles con personalidad" },
+      { title: "Compra segura", text: "Tus datos protegidos" },
+      { title: "Despacho a todo Chile", text: "Seguimiento de tu pedido" },
+      { title: "Atención personalizada", text: "Estamos para ayudarte" },
+    ]),
   heroImageUrl: z.string().default(""),
-  customCtaTitle: z.string().default("¿Tienes una idea?"),
+  heroBackgroundVideoUrl: z.string().default("/media/store-background.mp4"),
+  heroBackgroundPosterUrl: z.string().default("/media/store-background.jpg"),
+  customCtaTitle: z.string().default("¿Tienes una idea especial?"),
   customCtaText: z
     .string()
     .default(
-      "En TG LAB fabricamos productos personalizados a tu medida. Cuéntanos qué necesitas.",
+      "Cuéntanos lo que imaginas y conversemos sobre cómo hacerlo realidad.",
     ),
-  customCtaLabel: z.string().default("Solicitar personalizado"),
+  customCtaLabel: z.string().default("Solicitar producto personalizado"),
+  testimonials: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        quote: z.string().min(1),
+        detail: z.string().default(""),
+      }),
+    )
+    .default([]),
   sections: z
     .array(
       z.object({
@@ -73,9 +107,19 @@ export const homeSettingsSchema = z.object({
 });
 
 export const contactSettingsSchema = z.object({
-  email: z.string().default(""),
-  phone: z.string().default(""),
-  whatsapp: z.string().default(""), // formato E.164 sin +, ej: 56912345678
+  email: z
+    .string()
+    .trim()
+    .min(1)
+    .catch("tglab.decor@gmail.com")
+    .default("tglab.decor@gmail.com"),
+  phone: z
+    .string()
+    .trim()
+    .min(1)
+    .catch("+56 9 9243 0939")
+    .default("+56 9 9243 0939"),
+  whatsapp: z.string().default("56992430939"), // formato E.164 sin +, ej: 56912345678
   whatsappMessage: z
     .string()
     .default("Hola, vi {producto} en TG LAB y quisiera consultar..."),
@@ -125,6 +169,7 @@ export const legalSettingsSchema = z.object({
 });
 
 export const settingsSchemas = {
+  account: accountSettingsSchema,
   brand: brandSettingsSchema,
   home: homeSettingsSchema,
   contact: contactSettingsSchema,
@@ -145,6 +190,7 @@ export function defaultsFor<K extends SettingsGroup>(group: K): Settings[K] {
 
 export function allDefaults(): Settings {
   return {
+    account: defaultsFor("account"),
     brand: defaultsFor("brand"),
     home: defaultsFor("home"),
     contact: defaultsFor("contact"),

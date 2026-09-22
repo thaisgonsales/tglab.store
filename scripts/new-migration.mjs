@@ -9,6 +9,9 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
 
 const name = process.argv[2];
 if (!name || !/^[a-z0-9_]+$/.test(name)) {
@@ -21,12 +24,11 @@ const stamp = new Date()
   .replace(/[-:T]/g, "")
   .slice(0, 14);
 const dir = path.join("prisma", "migrations", `${stamp}_${name}`);
-mkdirSync(dir, { recursive: true });
 
 const sql = execFileSync(
-  "npx",
+  process.execPath,
   [
-    "prisma",
+    require.resolve("prisma/build/index.js"),
     "migrate",
     "diff",
     "--from-migrations",
@@ -35,7 +37,7 @@ const sql = execFileSync(
     "./prisma/schema.prisma",
     "--script",
   ],
-  { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+  { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] },
 );
 
 if (!sql.trim() || sql.includes("-- This is an empty migration.")) {
@@ -43,6 +45,7 @@ if (!sql.trim() || sql.includes("-- This is an empty migration.")) {
   process.exit(0);
 }
 
+mkdirSync(dir, { recursive: true });
 writeFileSync(path.join(dir, "migration.sql"), sql);
 console.log(`Migración creada: ${dir}/migration.sql`);
 console.log("Revísala y luego ejecuta: npm run db:migrate:deploy");

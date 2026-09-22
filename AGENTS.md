@@ -19,7 +19,7 @@ E-commerce de TG LAB (impresión 3D, Chiloé, Chile). Plan completo:
 - TypeScript `strict` + `noUncheckedIndexedAccess`.
 - Tailwind CSS v4 (tokens en `src/app/globals.css`; el color de marca se inyecta en runtime desde `Setting`).
 - PostgreSQL + Prisma 7. Cliente generado en `src/generated/prisma/` (no editar, no versionar).
-- Better Auth (`src/server/auth/`) — solo staff. Roles `owner` / `staff`.
+- Better Auth (`src/server/auth/`) — instancias separadas: personal `owner` / `staff` (`auth.ts`) y clientes (`customer-auth.ts`). Ver `docs/CUENTAS.md`.
 - Vitest (unit) + Playwright (e2e).
 
 ## Reglas del proyecto

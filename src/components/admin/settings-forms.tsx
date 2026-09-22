@@ -23,11 +23,187 @@ export function SettingsForms({
   return (
     <div className="space-y-6">
       <BrandForm value={settings.brand} />
+      <HomeForm value={settings.home} />
       <ContactForm value={settings.contact} />
       <CommerceForm value={settings.commerce} />
       <LegalForm value={settings.legal} />
       <PaymentStatusCard methods={paymentMethods} />
     </div>
+  );
+}
+
+function HomeForm({ value }: { value: Settings["home"] }) {
+  const [state, setState] = useState(value);
+  const save = useSave("home");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Portada</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Field label="Título principal">
+          <Input
+            value={state.heroTitle}
+            onChange={(e) => setState({ ...state, heroTitle: e.target.value })}
+          />
+        </Field>
+        <Field label="Texto principal">
+          <Textarea
+            rows={2}
+            value={state.heroSubtitle}
+            onChange={(e) =>
+              setState({ ...state, heroSubtitle: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Frase de confianza">
+          <Input
+            value={state.heroTrustLine}
+            onChange={(e) =>
+              setState({ ...state, heroTrustLine: e.target.value })
+            }
+          />
+        </Field>
+        <div className="border-border space-y-3 rounded-md border p-4">
+          <p className="text-sm font-semibold">Beneficios de la portada</p>
+          {state.benefits.map((benefit, index) => (
+            <div key={index} className="grid gap-2 sm:grid-cols-2">
+              <Input
+                aria-label={`Título del beneficio ${index + 1}`}
+                value={benefit.title}
+                onChange={(e) => {
+                  const benefits = [...state.benefits];
+                  benefits[index] = { ...benefit, title: e.target.value };
+                  setState({ ...state, benefits });
+                }}
+              />
+              <Input
+                aria-label={`Descripción del beneficio ${index + 1}`}
+                value={benefit.text}
+                onChange={(e) => {
+                  const benefits = [...state.benefits];
+                  benefits[index] = { ...benefit, text: e.target.value };
+                  setState({ ...state, benefits });
+                }}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Video de portada (URL)">
+            <Input
+              value={state.heroBackgroundVideoUrl}
+              onChange={(e) =>
+                setState({ ...state, heroBackgroundVideoUrl: e.target.value })
+              }
+            />
+          </Field>
+          <Field label="Imagen estática del video (URL)">
+            <Input
+              value={state.heroBackgroundPosterUrl}
+              onChange={(e) =>
+                setState({ ...state, heroBackgroundPosterUrl: e.target.value })
+              }
+            />
+          </Field>
+        </div>
+        <div className="border-border space-y-3 rounded-md border p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold">Testimonios reales</p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                setState({
+                  ...state,
+                  testimonials: [
+                    ...state.testimonials,
+                    { name: "", quote: "", detail: "" },
+                  ],
+                })
+              }
+            >
+              Agregar
+            </Button>
+          </div>
+          {state.testimonials.length === 0 && (
+            <p className="text-foreground-muted text-xs">
+              La sección permanece oculta hasta que agregues un testimonio.
+            </p>
+          )}
+          {state.testimonials.map((testimonial, index) => (
+            <div
+              key={index}
+              className="bg-surface-muted grid gap-2 rounded-md p-3 sm:grid-cols-2"
+            >
+              <Input
+                aria-label="Nombre del cliente"
+                placeholder="Nombre"
+                value={testimonial.name}
+                onChange={(e) => {
+                  const testimonials = [...state.testimonials];
+                  testimonials[index] = {
+                    ...testimonial,
+                    name: e.target.value,
+                  };
+                  setState({ ...state, testimonials });
+                }}
+              />
+              <Input
+                aria-label="Detalle del cliente"
+                placeholder="Detalle opcional"
+                value={testimonial.detail}
+                onChange={(e) => {
+                  const testimonials = [...state.testimonials];
+                  testimonials[index] = {
+                    ...testimonial,
+                    detail: e.target.value,
+                  };
+                  setState({ ...state, testimonials });
+                }}
+              />
+              <Textarea
+                aria-label="Testimonio"
+                placeholder="Testimonio"
+                className="sm:col-span-2"
+                value={testimonial.quote}
+                onChange={(e) => {
+                  const testimonials = [...state.testimonials];
+                  testimonials[index] = {
+                    ...testimonial,
+                    quote: e.target.value,
+                  };
+                  setState({ ...state, testimonials });
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  setState({
+                    ...state,
+                    testimonials: state.testimonials.filter(
+                      (_, current) => current !== index,
+                    ),
+                  })
+                }
+              >
+                Quitar
+              </Button>
+            </div>
+          ))}
+        </div>
+        <Button
+          size="sm"
+          disabled={save.isPending}
+          onClick={() => save.run(state)}
+        >
+          Guardar portada
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -76,6 +252,32 @@ function BrandForm({ value }: { value: Settings["brand"] }) {
             onChange={(e) => setState({ ...state, tagline: e.target.value })}
           />
         </Field>
+        <div className="border-border rounded-md border p-3">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">Franja informativa</p>
+              <p className="text-foreground-muted text-xs">
+                Aparece sobre el menú de la tienda.
+              </p>
+            </div>
+            <Switch
+              checked={state.announcementEnabled}
+              onCheckedChange={(announcementEnabled) =>
+                setState({ ...state, announcementEnabled })
+              }
+            />
+          </div>
+          {state.announcementEnabled && (
+            <Input
+              className="mt-3"
+              aria-label="Texto de la franja informativa"
+              value={state.announcementText}
+              onChange={(e) =>
+                setState({ ...state, announcementText: e.target.value })
+              }
+            />
+          )}
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Color primario" hint="#RRGGBB">
             <Input
@@ -90,6 +292,14 @@ function BrandForm({ value }: { value: Settings["brand"] }) {
               value={state.colorAccent}
               onChange={(e) =>
                 setState({ ...state, colorAccent: e.target.value })
+              }
+            />
+          </Field>
+          <Field label="Color de fondo" hint="#RRGGBB">
+            <Input
+              value={state.colorBackground}
+              onChange={(e) =>
+                setState({ ...state, colorBackground: e.target.value })
               }
             />
           </Field>
