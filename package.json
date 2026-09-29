@@ -32,6 +32,7 @@
     "db:seed": "dotenv -e .env -- tsx --conditions=react-server prisma/seed.ts",
     "db:reset": "dotenv -e .env -- prisma migrate reset",
     "admin:create": "dotenv -e .env -- tsx --conditions=react-server scripts/create-admin.ts",
+    "production:audit": "dotenv -e .env -- tsx --conditions=react-server scripts/audit-production.ts",
     "deploy:check": "tsx scripts/check-production-env.ts"
   },
   "prisma": {
