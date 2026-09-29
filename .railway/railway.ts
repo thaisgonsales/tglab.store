@@ -17,7 +17,7 @@ export default defineRailway(() => {
     start: "npm run db:migrate:deploy && npm run start -- --hostname 0.0.0.0 --port $PORT",
     healthcheck: "/api/health",
     healthcheckTimeout: 300,
-    preDeploy: "npm run db:migrate:deploy",
+    preDeploy: "npm run db:migrate:deploy && npm run production:audit",
     variables: {
       APP_ENV: preserve(),
       BETTER_AUTH_SECRET: preserve(),

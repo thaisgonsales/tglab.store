@@ -37,9 +37,17 @@ function checkProductionEnvironment(): CheckResult {
   if (isLocalUrl(databaseUrl)) {
     errors.push("DATABASE_URL no puede apuntar a localhost en producción.");
   }
+  const usesRailwayPrivateNetwork = (() => {
+    try {
+      return new URL(databaseUrl).hostname.endsWith(".railway.internal");
+    } catch {
+      return false;
+    }
+  })();
   if (
     databaseUrl.startsWith("postgres") &&
-    !databaseUrl.includes("sslmode=require")
+    !databaseUrl.includes("sslmode=require") &&
+    !usesRailwayPrivateNetwork
   ) {
     warnings.push(
       "DATABASE_URL no declara sslmode=require; confirma que el proveedor fuerce TLS.",
@@ -89,10 +97,27 @@ function checkProductionEnvironment(): CheckResult {
     warnings.push("Sentry no está configurado: faltará monitoreo de errores.");
   }
 
-  const hasPayment =
-    env.PAYMENTS_BANK_TRANSFER_ENABLED === "true" ||
-    Boolean(env.MERCADOPAGO_ACCESS_TOKEN && env.MERCADOPAGO_WEBHOOK_SECRET) ||
-    Boolean(env.TRANSBANK_COMMERCE_CODE && env.TRANSBANK_API_KEY);
+  const hasBankTransfer = env.PAYMENTS_BANK_TRANSFER_ENABLED === "true";
+  const hasMercadoPagoCredentials = Boolean(
+    env.MERCADOPAGO_ACCESS_TOKEN &&
+    env.MERCADOPAGO_PUBLIC_KEY &&
+    env.MERCADOPAGO_WEBHOOK_SECRET,
+  );
+  const hasWebpayCredentials = Boolean(
+    env.TRANSBANK_COMMERCE_CODE && env.TRANSBANK_API_KEY,
+  );
+  const hasMercadoPago =
+    hasMercadoPagoCredentials && env.MERCADOPAGO_MODE === "production";
+  const hasWebpay =
+    hasWebpayCredentials && env.TRANSBANK_MODE === "production";
+  const hasPayment = hasBankTransfer || hasMercadoPago || hasWebpay;
+
+  if (hasMercadoPagoCredentials && env.MERCADOPAGO_MODE !== "production") {
+    errors.push("Mercado Pago tiene credenciales, pero continúa en modo sandbox.");
+  }
+  if (hasWebpayCredentials && env.TRANSBANK_MODE !== "production") {
+    errors.push("Webpay tiene credenciales, pero continúa en modo integración.");
+  }
   if (!hasPayment)
     errors.push("Debe existir al menos un medio de pago configurado.");
 
