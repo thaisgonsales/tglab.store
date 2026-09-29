@@ -15,6 +15,7 @@ import type { ActionResult } from "@/server/auth/action-guard";
 import { db } from "@/server/db";
 import { sendEmail } from "@/server/email/send";
 import { getSettingsGroup } from "@/server/services/settings-service";
+import { verifyPrivateUploadToken } from "@/server/upload/private-upload-token";
 
 /** Envío público del formulario de solicitud de producto personalizado. */
 export async function submitCustomRequest(
@@ -40,7 +41,7 @@ export async function submitCustomRequest(
     hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     hdrs.get("x-real-ip") ??
     "unknown";
-  const limit = rateLimit(`custom-request:${ip}`, {
+  const limit = await rateLimit(`custom-request:${ip}`, {
     limit: 5,
     windowMs: 60 * 60 * 1000,
   });
@@ -53,6 +54,20 @@ export async function submitCustomRequest(
 
   try {
     const desiredDate = data.desiredDate ? new Date(data.desiredDate) : null;
+    const files = data.files.map((file) => {
+      const claim = verifyPrivateUploadToken(file.uploadToken);
+      if (claim.mime !== file.mimeType || claim.size !== file.sizeBytes) {
+        throw new Error("Los datos de la imagen no coinciden");
+      }
+      const id = crypto.randomUUID();
+      return {
+        id,
+        url: `/api/admin/custom-request-files/${id}`,
+        storageKey: claim.key,
+        mimeType: claim.mime,
+        sizeBytes: claim.size,
+      };
+    });
 
     const request = await db.customRequest.create({
       data: {
@@ -68,12 +83,7 @@ export async function submitCustomRequest(
         notes: data.notes || null,
         status: "NEW",
         files: {
-          create: data.files.map((f) => ({
-            url: f.url,
-            storageKey: f.storageKey,
-            mimeType: f.mimeType,
-            sizeBytes: f.sizeBytes,
-          })),
+          create: files,
         },
       },
     });

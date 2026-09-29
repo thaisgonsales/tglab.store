@@ -10,6 +10,7 @@ export default async function Page() {
       staff
       currentId={session.session.id}
       twoFactorEnabled={session.user.twoFactorEnabled ?? false}
+      twoFactorRequired
     />
   );
 }

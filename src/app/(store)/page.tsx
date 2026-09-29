@@ -16,16 +16,19 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { JsonLd } from "@/components/seo/json-ld";
+import { DiscoveryVideos } from "@/components/store/discovery-videos";
 import { HeroBackground } from "@/components/store/hero-background";
 import { ProductCard } from "@/components/store/product-card";
 import { Button } from "@/components/ui/button";
 import { publicEnv } from "@/lib/env";
+import { formatDateLong } from "@/lib/datetime";
 import {
   getBestSellers,
   listPublishedProducts,
   listStoreCategories,
   searchCatalog,
 } from "@/server/services/catalog-service";
+import { listHomeReviews } from "@/server/services/engagement-service";
 import { getAllSettings } from "@/server/services/settings-service";
 
 export default async function HomePage() {
@@ -34,13 +37,14 @@ export default async function HomePage() {
   const sameAs = [contact.instagram, contact.facebook].filter(
     (value): value is string => Boolean(value),
   );
-  const [featured, latest, bestSellers, offersResult, categories] =
+  const [featured, latest, bestSellers, offersResult, categories, reviews] =
     await Promise.all([
       listPublishedProducts({ featured: true, take: 8 }),
       listPublishedProducts({ take: 8 }),
       getBestSellers(8),
       searchCatalog({ onlyOffers: true, sort: "ofertas", perPage: 8 }),
       listStoreCategories(6),
+      listHomeReviews(6),
     ]);
   const sectionData: Record<string, typeof latest> = {
     featured,
@@ -48,6 +52,13 @@ export default async function HomePage() {
     bestsellers: bestSellers,
     offers: offersResult.items,
   };
+  const enabledSections = home.sections.filter(
+    (section) =>
+      section.enabled && (sectionData[section.type]?.length ?? 0) > 0,
+  );
+  const primarySection =
+    enabledSections.find((section) => section.type === "featured") ??
+    enabledSections[0];
 
   return (
     <div>
@@ -82,11 +93,11 @@ export default async function HomePage() {
           videoUrl={home.heroBackgroundVideoUrl}
           posterUrl={home.heroBackgroundPosterUrl}
         />
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(42,29,25,.88)_0%,rgba(58,43,40,.66)_48%,rgba(58,43,40,.22)_100%)]" />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(25,24,27,.72)_0%,rgba(25,24,27,.42)_38%,rgba(25,24,27,.08)_68%,transparent_100%)]" />
         <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8">
           <div className="hero-content max-w-2xl text-white">
             <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-xs font-semibold tracking-[.16em] uppercase backdrop-blur-sm">
-              <Sparkles className="size-4 text-[#f6b58c]" /> Diseño que se
+              <Sparkles className="size-4 text-[#f2a4bc]" /> Diseño que se
               siente tuyo
             </p>
             <h1 className="text-5xl leading-[.96] font-semibold tracking-[-.045em] text-balance sm:text-6xl md:text-7xl">
@@ -114,7 +125,7 @@ export default async function HomePage() {
               </Button>
             </div>
             <p className="mt-7 flex items-center gap-2 text-sm text-white/75">
-              <BadgeCheck className="size-4 text-[#f6b58c]" />
+              <BadgeCheck className="size-4 text-[#f2a4bc]" />
               {home.heroTrustLine}
             </p>
           </div>
@@ -124,7 +135,7 @@ export default async function HomePage() {
       <section
         data-reveal
         aria-label="Beneficios de comprar en TG LAB"
-        className="border-border bg-surface border-b"
+        className="border-border bg-surface border-b shadow-[0_10px_35px_rgba(41,39,45,.035)]"
       >
         <div className="mx-auto grid max-w-6xl grid-cols-2 px-4 py-5 md:grid-cols-4">
           {home.benefits.map(({ title, text }, index) => {
@@ -138,8 +149,11 @@ export default async function HomePage() {
                 ] satisfies LucideIcon[]
               )[index] ?? Sparkles;
             return (
-              <div key={title} className="flex items-center gap-3 px-3 py-3">
-                <span className="bg-brand/10 text-brand flex size-10 shrink-0 items-center justify-center rounded-full">
+              <div
+                key={title}
+                className="group flex items-center gap-3 px-3 py-3"
+              >
+                <span className="bg-brand/10 text-brand flex size-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105">
                   <Icon className="size-5" />
                 </span>
                 <div>
@@ -153,6 +167,15 @@ export default async function HomePage() {
       </section>
 
       <div className="mx-auto max-w-6xl px-4">
+        {primarySection && (
+          <ProductSection
+            title={primarySection.title}
+            href={sectionHref(primarySection.type)}
+            products={sectionData[primarySection.type] ?? []}
+            tone="coral"
+          />
+        )}
+
         {categories.length > 0 && (
           <section data-reveal className="py-16 sm:py-20">
             <SectionHeading
@@ -162,12 +185,13 @@ export default async function HomePage() {
               href="/categorias"
             />
             <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-              {categories.map((category) => (
+              {categories.map((category, index) => (
                 <Link
                   key={category.id}
                   href={`/categoria/${category.slug}`}
                   data-reveal-item
-                  className="group relative isolate min-h-64 overflow-hidden rounded-[1.25rem] bg-[#e3d3bc] shadow-[0_12px_35px_rgba(58,43,40,.08)]"
+                  data-reveal-kind={index % 2 === 0 ? "left" : "right"}
+                  className="group relative isolate min-h-64 overflow-hidden rounded-[1.4rem] bg-[#ece5f6] shadow-[0_12px_35px_rgba(41,39,45,.08)] transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(108,74,182,.16)]"
                 >
                   {category.imageUrl ? (
                     <Image
@@ -178,9 +202,17 @@ export default async function HomePage() {
                       className="object-cover transition duration-500 group-hover:scale-105"
                     />
                   ) : (
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(239,157,104,.55),transparent_42%),linear-gradient(145deg,#eadbc5,#cfaec0)]" />
+                    <div
+                      className={
+                        [
+                          "absolute inset-0 bg-[linear-gradient(145deg,#f6f1fb,#d9cbed)]",
+                          "absolute inset-0 bg-[linear-gradient(145deg,#fff7f9,#efc3d0)]",
+                          "absolute inset-0 bg-[linear-gradient(145deg,#f7f3fb,#eadff4)]",
+                        ][index % 3]
+                      }
+                    />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#2f211e]/90 via-[#2f211e]/15 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#29272d]/90 via-[#29272d]/15 to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                     <h3 className="font-semibold">{category.name}</h3>
                     <p className="mt-1 line-clamp-2 text-xs text-white/75">
@@ -194,25 +226,17 @@ export default async function HomePage() {
           </section>
         )}
 
-        {home.sections
-          .filter(
-            (section) =>
-              section.enabled && (sectionData[section.type]?.length ?? 0) > 0,
-          )
-          .map((section) => (
+        <DiscoveryVideos videos={home.discoveryVideos} />
+
+        {enabledSections
+          .filter((section) => section.key !== primarySection?.key)
+          .map((section, index) => (
             <ProductSection
               key={section.key}
               title={section.title}
-              href={
-                section.type === "offers"
-                  ? "/productos?orden=ofertas"
-                  : section.type === "new"
-                    ? "/productos?orden=nuevos"
-                    : section.type === "bestsellers"
-                      ? "/productos?orden=vendidos"
-                      : "/productos"
-              }
+              href={sectionHref(section.type)}
               products={sectionData[section.type] ?? []}
+              tone={(["lilac", "coral"] as const)[index % 2]}
             />
           ))}
 
@@ -237,25 +261,21 @@ export default async function HomePage() {
 
         <section
           data-reveal
-          className="my-16 overflow-hidden rounded-[1.75rem] bg-[#3a2b28] px-6 py-12 text-white sm:px-12 sm:py-16"
+          className="border-brand/15 relative my-16 overflow-hidden rounded-[1.75rem] border bg-[#fff5f7] px-6 py-12 text-[#29272d] shadow-[0_14px_40px_rgba(41,39,45,.06)] sm:px-12 sm:py-16"
         >
           <div className="grid items-center gap-8 md:grid-cols-[1fr_auto]">
             <div>
-              <p className="text-sm font-semibold tracking-[.14em] text-[#ef9d68] uppercase">
+              <p className="text-brand text-sm font-semibold tracking-[.14em] uppercase">
                 Hecho a tu medida
               </p>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
                 {home.customCtaTitle}
               </h2>
-              <p className="mt-4 max-w-2xl text-white/70">
+              <p className="text-foreground-muted mt-4 max-w-2xl">
                 {home.customCtaText}
               </p>
             </div>
-            <Button
-              asChild
-              size="lg"
-              className="bg-[#ef9d68] text-[#3a2b28] hover:opacity-90"
-            >
+            <Button asChild size="lg" className="bg-brand text-white">
               <Link href="/personalizados">
                 {home.customCtaLabel}
                 <ArrowRight />
@@ -264,27 +284,50 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {home.testimonials.length > 0 && (
+        {reviews.length > 0 && (
           <section data-reveal className="py-16">
             <SectionHeading
               eyebrow="Experiencias"
               title="Lo que dicen nuestros clientes"
-              text="Historias reales de personas que eligieron TG LAB."
+              text="Experiencias de quienes ya eligieron TG LAB."
             />
-            <div className="mt-8 grid gap-5 md:grid-cols-3">
-              {home.testimonials.map((item) => (
+            <div className="-mx-4 mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">
+              {reviews.map((review) => (
                 <blockquote
-                  key={`${item.name}-${item.quote}`}
-                  className="bg-surface rounded-[1.25rem] border p-6"
+                  key={review.id}
+                  data-reveal-item
+                  className="bg-surface hover:border-brand/25 w-[82vw] max-w-sm shrink-0 snap-center rounded-[1.25rem] border p-6 shadow-[0_10px_30px_rgba(41,39,45,.045)] transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(41,39,45,.09)] md:w-auto md:max-w-none"
                 >
-                  <p className="text-lg leading-relaxed">“{item.quote}”</p>
+                  <p
+                    className="text-brand"
+                    aria-label={`${review.rating} de 5 estrellas`}
+                  >
+                    {"★".repeat(review.rating)}
+                    <span className="text-border">
+                      {"★".repeat(5 - review.rating)}
+                    </span>
+                  </p>
+                  {review.title && (
+                    <h3 className="mt-3 font-semibold">{review.title}</h3>
+                  )}
+                  <p className="text-foreground-muted mt-2 text-sm leading-relaxed">
+                    “{review.content}”
+                  </p>
                   <footer className="mt-5 text-sm font-semibold">
-                    {item.name}
-                    {item.detail && (
-                      <span className="text-foreground-muted ml-2 font-normal">
-                        {item.detail}
-                      </span>
-                    )}
+                    {review.account.firstName ||
+                      review.account.name.split(" ")[0]}
+                    <span className="text-foreground-muted ml-2 font-normal">
+                      Compra verificada
+                    </span>
+                    <Link
+                      href={`/producto/${review.product.slug}`}
+                      className="text-brand mt-1 block text-xs font-medium hover:underline"
+                    >
+                      {review.product.name}
+                    </Link>
+                    <time className="text-foreground-muted mt-1 block text-xs font-normal">
+                      {formatDateLong(review.createdAt)}
+                    </time>
                   </footer>
                 </blockquote>
               ))}
@@ -294,7 +337,7 @@ export default async function HomePage() {
 
         <section
           data-reveal
-          className="border-border bg-surface my-16 rounded-[1.5rem] border p-6 sm:p-9"
+          className="border-brand/10 bg-surface my-16 rounded-[1.5rem] border p-6 shadow-[0_14px_40px_rgba(41,39,45,.05)] sm:p-9"
         >
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
             {(
@@ -371,13 +414,18 @@ function ProductSection({
   title,
   href,
   products,
+  tone,
 }: {
   title: string;
   href: string;
   products: Awaited<ReturnType<typeof listPublishedProducts>>;
+  tone: "lilac" | "coral" | undefined;
 }) {
   return (
-    <section data-reveal className="py-14">
+    <section
+      data-reveal
+      className={`relative py-16 section-${tone ?? "lilac"}`}
+    >
       <SectionHeading
         eyebrow="Selección TG LAB"
         title={title}
@@ -391,4 +439,11 @@ function ProductSection({
       </div>
     </section>
   );
+}
+
+function sectionHref(type: string) {
+  if (type === "offers") return "/productos?orden=ofertas";
+  if (type === "new") return "/productos?orden=nuevos";
+  if (type === "bestsellers") return "/productos?orden=vendidos";
+  return "/productos";
 }

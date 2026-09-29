@@ -3,6 +3,7 @@ import { SiteFooter } from "@/components/store/site-footer";
 import { SiteHeader } from "@/components/store/site-header";
 import { WhatsappButton } from "@/components/store/whatsapp-button";
 import { ScrollReveal } from "@/components/store/scroll-reveal";
+import { PageTransition } from "@/components/store/page-transition";
 import { getCartItemCount } from "@/server/services/cart-service";
 import { getSettingsGroup } from "@/server/services/settings-service";
 
@@ -24,7 +25,6 @@ export default async function StoreLayout({ children }: LayoutProps<"/">) {
     <>
       <SiteHeader
         storeName={brand.storeName}
-        logoUrl={brand.logoUrl || undefined}
         cartCount={cartCount}
         accountLabel={session ? account.account : account.login}
         accountHref={session ? "/cuenta" : "/cuenta/login"}
@@ -33,7 +33,9 @@ export default async function StoreLayout({ children }: LayoutProps<"/">) {
         }
       />
       <ScrollReveal />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1">
+        <PageTransition>{children}</PageTransition>
+      </main>
       <SiteFooter />
       <WhatsappButton />
     </>

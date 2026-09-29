@@ -14,17 +14,18 @@ export function ProductCard({ product }: { product: ProductCardData }) {
   return (
     <article
       data-reveal-item
-      className="group rounded-card border-border bg-surface flex flex-col overflow-hidden border shadow-[0_10px_35px_rgba(58,43,40,0.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(58,43,40,0.12)]"
+      data-reveal-kind="scale"
+      className="group rounded-card border-border/80 bg-surface hover:border-brand/30 flex flex-col overflow-hidden border shadow-[0_8px_24px_rgba(41,39,45,.045)] transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:shadow-[0_16px_34px_rgba(41,39,45,.1)]"
     >
       <Link href={`/producto/${product.slug}`} className="block">
-        <div className="bg-surface-muted relative aspect-square">
+        <div className="bg-surface-muted relative aspect-square overflow-hidden">
           {image ? (
             <Image
               src={image.url}
               alt={image.alt ?? product.name}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className="object-cover"
+              className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.035]"
               placeholder={image.blurDataUrl ? "blur" : "empty"}
               blurDataURL={image.blurDataUrl ?? undefined}
             />
@@ -63,7 +64,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           </p>
         )}
         <div className="mt-auto flex items-baseline gap-2 pt-1">
-          <span className="font-semibold">
+          <span className="text-brand text-[15px] font-bold">
             {price.hasRange ? "Desde " : ""}
             {formatCLP(price.from)}
           </span>
@@ -79,7 +80,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           ) : null}
           <Link
             href={`/producto/${product.slug}`}
-            className="border-border hover:bg-surface-muted flex h-8 flex-1 items-center justify-center rounded-md border px-3 text-xs font-medium"
+            className="border-brand/25 text-brand hover:bg-surface-muted hover:border-brand/50 flex h-8 flex-1 items-center justify-center rounded-lg border px-3 text-xs font-semibold transition-[background-color,border-color,transform] hover:-translate-y-0.5"
           >
             Ver detalles
           </Link>

@@ -55,6 +55,23 @@ export const listPublishedProducts = cache(
   },
 );
 
+/** Modelos que el administrador configuró con opciones de personalización. */
+export const listCustomizableProducts = cache(async (take = 24) => {
+  try {
+    return await db.product.findMany({
+      where: {
+        ...PUBLISHED_WHERE,
+        isCustomizable: true,
+      },
+      select: cardSelect,
+      orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
+      take,
+    });
+  } catch {
+    return [] as ProductCardData[];
+  }
+});
+
 export const getBestSellers = cache(async (take = 8) => {
   try {
     const grouped = await db.orderItem.groupBy({

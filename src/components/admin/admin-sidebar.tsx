@@ -11,6 +11,7 @@ import {
   Truck,
   Sparkles,
   FileText,
+  MessageSquareText,
   Settings,
 } from "lucide-react";
 import Link from "next/link";
@@ -25,6 +26,7 @@ const NAV = [
   { label: "Atributos", href: "/admin/atributos", icon: SlidersHorizontal },
   { label: "Pedidos", href: "/admin/pedidos", icon: ShoppingCart },
   { label: "Clientes", href: "/admin/clientes", icon: Users },
+  { label: "Reseñas", href: "/admin/resenas", icon: MessageSquareText },
   { label: "Cupones", href: "/admin/cupones", icon: Ticket },
   { label: "Despachos", href: "/admin/despachos", icon: Truck },
   { label: "Personalizados", href: "/admin/personalizados", icon: Sparkles },
@@ -32,12 +34,24 @@ const NAV = [
   { label: "Configuración", href: "/admin/configuracion", icon: Settings },
 ];
 
-export function AdminSidebar({ owner, labels }: { owner: boolean; labels: { security: string; team: string } }) {
+export function AdminSidebar({
+  owner,
+  labels,
+}: {
+  owner: boolean;
+  labels: { security: string; team: string };
+}) {
   const pathname = usePathname();
 
   return (
     <nav className="flex flex-col gap-0.5 p-3">
-      {[...NAV, { label: labels.security, href: "/admin/seguridad", icon: Settings }, ...(owner ? [{ label: labels.team, href: "/admin/equipo", icon: Users }] : [])].map((item) => {
+      {[
+        ...NAV,
+        { label: labels.security, href: "/admin/seguridad", icon: Settings },
+        ...(owner
+          ? [{ label: labels.team, href: "/admin/equipo", icon: Users }]
+          : []),
+      ].map((item) => {
         const active = item.exact
           ? pathname === item.href
           : pathname.startsWith(item.href);

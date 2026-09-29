@@ -1,41 +1,6 @@
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
-const storageOrigin = (() => {
-  try {
-    return process.env.S3_PUBLIC_URL
-      ? new URL(process.env.S3_PUBLIC_URL).origin
-      : "";
-  } catch {
-    return "";
-  }
-})();
-
-const sentryOrigin = (() => {
-  try {
-    return process.env.NEXT_PUBLIC_SENTRY_DSN
-      ? new URL(process.env.NEXT_PUBLIC_SENTRY_DSN).origin
-      : "";
-  } catch {
-    return "";
-  }
-})();
-
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "object-src 'none'",
-  "frame-ancestors 'self'",
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net",
-  "style-src 'self' 'unsafe-inline'",
-  "font-src 'self' data:",
-  `img-src 'self' data: blob: ${storageOrigin} https://www.google-analytics.com https://www.facebook.com`.trim(),
-  `media-src 'self' blob: ${storageOrigin}`.trim(),
-  `connect-src 'self' ${sentryOrigin} https://www.google-analytics.com https://region1.google-analytics.com https://www.facebook.com`.trim(),
-  "form-action 'self' https://webpay3g.transbank.cl https://webpay3gint.transbank.cl",
-  "upgrade-insecure-requests",
-].join("; ");
-
 /** Cabeceras de seguridad aplicadas a todas las rutas. */
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -49,7 +14,6 @@ const securityHeaders = [
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
   },
-  { key: "Content-Security-Policy", value: contentSecurityPolicy },
 ];
 
 const remotePatterns: NonNullable<NextConfig["images"]>["remotePatterns"] = [];

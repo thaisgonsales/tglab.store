@@ -22,18 +22,18 @@ export const brandSettingsSchema = z.object({
   announcementEnabled: z.boolean().default(true),
   announcementText: z
     .string()
-    .default("Preparamos tu pedido en 2–4 días hábiles 💌"),
+    .default("Preparamos tu pedido en 2–5 días hábiles 💌"),
   logoUrl: z.string().default(""),
   logoDarkUrl: z.string().default(""),
   faviconUrl: z.string().default(""),
   ogImageUrl: z.string().default(""),
-  colorPrimary: z.string().default("#bd527c"),
-  colorPrimaryDark: z.string().default("#f2aac6"),
-  colorAccent: z.string().default("#ef9d68"),
+  colorPrimary: z.string().default("#d95c82"),
+  colorPrimaryDark: z.string().default("#c84b72"),
+  colorAccent: z.string().default("#9b7ad6"),
   colorBackground: z
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/)
-    .default("#eee3d2"),
+    .default("#faf7f2"),
 });
 
 export const homeSettingsSchema = z.object({
@@ -62,6 +62,16 @@ export const homeSettingsSchema = z.object({
   heroImageUrl: z.string().default(""),
   heroBackgroundVideoUrl: z.string().default("/media/store-background.mp4"),
   heroBackgroundPosterUrl: z.string().default("/media/store-background.jpg"),
+  discoveryVideos: z
+    .array(
+      z.object({
+        title: z.string().min(1),
+        videoUrl: z.string().min(1),
+        posterUrl: z.string().default(""),
+      }),
+    )
+    .max(3)
+    .default([]),
   customCtaTitle: z.string().default("¿Tienes una idea especial?"),
   customCtaText: z
     .string()

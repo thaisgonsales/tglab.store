@@ -18,7 +18,21 @@ function revalidateProduct(id?: string) {
   revalidatePath("/admin/productos");
   if (id) revalidatePath(`/admin/productos/${id}`);
   revalidatePath("/productos");
+  revalidatePath("/personalizados");
   revalidatePath("/", "layout");
+}
+
+export async function setProductCustomizable(
+  id: string,
+  isCustomizable: boolean,
+) {
+  return staffAction(async () => {
+    const product = await db.product.findUnique({ where: { id } });
+    if (!product) throw new ActionError("El producto no existe.");
+    await db.product.update({ where: { id }, data: { isCustomizable } });
+    revalidateProduct(id);
+    return null;
+  });
 }
 
 async function uniqueProductSlug(base: string, ignoreId?: string) {
@@ -251,6 +265,7 @@ export async function duplicateProduct(id: string) {
         slug,
         type: source.type,
         status: "DRAFT",
+        isCustomizable: source.isCustomizable,
         shortDescription: source.shortDescription,
         description: source.description ?? undefined,
         material: source.material,

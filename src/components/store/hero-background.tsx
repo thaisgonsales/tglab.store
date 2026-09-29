@@ -33,6 +33,29 @@ export function HeroBackground({
     };
   }, [videoUrl]);
 
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const mobile = window.matchMedia("(max-width: 767px)");
+    if (reduced.matches || mobile.matches) return;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      video.style.transform = `translate3d(0, ${Math.min(window.scrollY * 0.035, 18)}px, 0)`;
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+      video.style.transform = "";
+    };
+  }, []);
+
   return (
     <video
       ref={videoRef}
@@ -42,7 +65,7 @@ export function HeroBackground({
       playsInline
       preload="none"
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 -z-20 h-full w-full object-cover object-center"
+      className="pointer-events-none absolute inset-0 -z-20 h-full w-full object-cover object-center will-change-transform"
     />
   );
 }

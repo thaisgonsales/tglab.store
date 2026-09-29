@@ -5,7 +5,10 @@ import { cn } from "@/lib/utils";
 export function Card({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
-      className={cn("rounded-card border-border bg-surface border", className)}
+      className={cn(
+        "rounded-card border-border/80 bg-surface border shadow-[0_10px_30px_rgba(41,39,45,.045)]",
+        className,
+      )}
       {...props}
     />
   );

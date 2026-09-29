@@ -108,6 +108,93 @@ function HomeForm({ value }: { value: Settings["home"] }) {
           </Field>
         </div>
         <div className="border-border space-y-3 rounded-md border p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold">Videos “Descubre TG LAB”</p>
+              <p className="text-foreground-muted text-xs">
+                Hasta 3 videos verticales. La sección se oculta si no agregas
+                ninguno.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={state.discoveryVideos.length >= 3}
+              onClick={() =>
+                setState({
+                  ...state,
+                  discoveryVideos: [
+                    ...state.discoveryVideos,
+                    { title: "", videoUrl: "", posterUrl: "" },
+                  ],
+                })
+              }
+            >
+              Agregar video
+            </Button>
+          </div>
+          {state.discoveryVideos.map((video, index) => (
+            <div
+              key={index}
+              className="bg-surface-muted grid gap-2 rounded-md p-3 sm:grid-cols-2"
+            >
+              <Input
+                placeholder="Título"
+                value={video.title}
+                onChange={(event) => {
+                  const discoveryVideos = [...state.discoveryVideos];
+                  discoveryVideos[index] = {
+                    ...video,
+                    title: event.target.value,
+                  };
+                  setState({ ...state, discoveryVideos });
+                }}
+              />
+              <Input
+                placeholder="URL del video"
+                value={video.videoUrl}
+                onChange={(event) => {
+                  const discoveryVideos = [...state.discoveryVideos];
+                  discoveryVideos[index] = {
+                    ...video,
+                    videoUrl: event.target.value,
+                  };
+                  setState({ ...state, discoveryVideos });
+                }}
+              />
+              <Input
+                className="sm:col-span-2"
+                placeholder="URL del poster (recomendado)"
+                value={video.posterUrl}
+                onChange={(event) => {
+                  const discoveryVideos = [...state.discoveryVideos];
+                  discoveryVideos[index] = {
+                    ...video,
+                    posterUrl: event.target.value,
+                  };
+                  setState({ ...state, discoveryVideos });
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  setState({
+                    ...state,
+                    discoveryVideos: state.discoveryVideos.filter(
+                      (_, current) => current !== index,
+                    ),
+                  })
+                }
+              >
+                Quitar
+              </Button>
+            </div>
+          ))}
+        </div>
+        <div className="border-border space-y-3 rounded-md border p-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold">Testimonios reales</p>
             <Button

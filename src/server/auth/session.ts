@@ -11,7 +11,7 @@ export type StaffSession = NonNullable<
 >;
 
 /** Devuelve la sesión de staff o `null`. No redirige. */
-export async function getStaffSession(): Promise<StaffSession | null> {
+async function getBaseStaffSession(): Promise<StaffSession | null> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return null;
   if (session.user.isActive === false) return null;
@@ -20,10 +20,25 @@ export async function getStaffSession(): Promise<StaffSession | null> {
   return session as StaffSession;
 }
 
+/** Solo considera válida una sesión administrativa protegida con 2FA. */
+export async function getStaffSession(): Promise<StaffSession | null> {
+  const session = await getBaseStaffSession();
+  return session?.user.twoFactorEnabled ? session : null;
+}
+
 /** Exige sesión de staff activa; redirige a login si no hay. */
 export async function requireStaff(): Promise<StaffSession> {
-  const session = await getStaffSession();
+  const session = await getBaseStaffSession();
   if (!session) redirect(ADMIN_LOGIN_PATH);
+  if (!session.user.twoFactorEnabled) redirect("/admin/setup-2fa");
+  return session;
+}
+
+/** Permite únicamente completar el alta obligatoria de 2FA. */
+export async function requireStaffForTwoFactorSetup(): Promise<StaffSession> {
+  const session = await getBaseStaffSession();
+  if (!session) redirect(ADMIN_LOGIN_PATH);
+  if (session.user.twoFactorEnabled) redirect("/admin");
   return session;
 }
 

@@ -30,6 +30,8 @@ export type CustomFieldDef = {
   options: string[];
 };
 
+type PurchaseVariant = SelectableVariant & { mediaIds?: string[] };
+
 export function ProductPurchase({
   productId,
   productName,
@@ -42,7 +44,7 @@ export function ProductPurchase({
   productId: string;
   productName: string;
   attributes: SelectableAttribute[];
-  variants: SelectableVariant[];
+  variants: PurchaseVariant[];
   customFields: CustomFieldDef[];
   lowStockThreshold: number;
   lastUnitsThreshold: number;
@@ -65,6 +67,18 @@ export function ProductPurchase({
     () => resolveVariant(variants, selection, attributes),
     [variants, selection, attributes],
   );
+
+  const variantMediaId = variants.find(
+    (candidate) => candidate.id === variant?.id,
+  )?.mediaIds?.[0];
+
+  useEffect(() => {
+    const mediaId = variantMediaId;
+    if (!mediaId) return;
+    window.dispatchEvent(
+      new CustomEvent("tglab:variant-media", { detail: { mediaId } }),
+    );
+  }, [variantMediaId]);
 
   useEffect(() => {
     const from = Math.min(...variants.map((v) => v.price));
@@ -169,17 +183,22 @@ export function ProductPurchase({
                       aria-pressed={isOn}
                       title={v.label}
                       className={cn(
-                        "relative size-9 rounded-full border",
+                        "flex items-center gap-2 rounded-full border py-1.5 pr-3 pl-1.5 text-sm transition-colors",
                         isOn
-                          ? "ring-brand ring-offset-background ring-2 ring-offset-2"
-                          : "border-border",
+                          ? "border-brand bg-brand/5 ring-brand/30 ring-2"
+                          : "border-border hover:border-brand/40",
                         isDisabled && "opacity-30",
                       )}
-                      style={{ backgroundColor: v.hex ?? "#ccc" }}
                     >
-                      {isOn && (
-                        <Check className="absolute inset-0 m-auto size-4 text-white mix-blend-difference" />
-                      )}
+                      <span
+                        className="relative size-6 shrink-0 rounded-full border border-black/10"
+                        style={{ backgroundColor: v.hex ?? "#ccc" }}
+                      >
+                        {isOn && (
+                          <Check className="absolute inset-0 m-auto size-3.5 text-white mix-blend-difference" />
+                        )}
+                      </span>
+                      <span>{v.label}</span>
                     </button>
                   );
                 }
@@ -271,6 +290,39 @@ export function ProductPurchase({
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {(attributes.length > 0 || customFields.length > 0) && (
+        <div className="border-brand/20 rounded-xl border bg-[#fff8fa] p-4">
+          <h2 className="text-sm font-semibold">Resumen de tu configuración</h2>
+          <dl className="mt-3 space-y-1.5 text-sm">
+            {attributes.map((attribute) => {
+              const value = attribute.values.find(
+                (item) => item.id === selection[attribute.id],
+              );
+              return (
+                <div key={attribute.id} className="flex justify-between gap-4">
+                  <dt className="text-foreground-muted">{attribute.name}</dt>
+                  <dd className="text-right font-medium">
+                    {value?.label ?? "Pendiente"}
+                  </dd>
+                </div>
+              );
+            })}
+            {customFields.map((field) => (
+              <div key={field.key} className="flex justify-between gap-4">
+                <dt className="text-foreground-muted">{field.label}</dt>
+                <dd className="max-w-[60%] text-right font-medium break-words">
+                  {custom[field.key] || (field.isRequired ? "Pendiente" : "—")}
+                </dd>
+              </div>
+            ))}
+            <div className="border-brand/15 mt-2 flex justify-between gap-4 border-t pt-2">
+              <dt className="font-medium">Total ({quantity})</dt>
+              <dd className="font-semibold">{formatCLP(price * quantity)}</dd>
+            </div>
+          </dl>
         </div>
       )}
 

@@ -13,31 +13,33 @@
     Roboto, sans-serif;
   --font-mono:
     var(--font-mono-face), ui-monospace, "SFMono-Regular", "Menlo", monospace;
-
-  --color-brand: var(--tglab-brand, #bd527c);
+  --color-brand: var(--tglab-brand, #d95c82);
   --color-brand-fg: var(--tglab-brand-fg, #ffffff);
-  --color-accent: var(--tglab-accent, #ef9d68);
+  --color-accent: var(--tglab-accent, #9b7ad6);
+  --color-lilac: #9b7ad6;
+  --color-coral: #d95c82;
+  --color-sun: #f4c95d;
 
-  --radius-card: 0.75rem;
+  --radius-card: 1.125rem;
 }
 
 /*
-  Paleta: beige cálido + rosado sakura (marca) + durazno (acento).
-  Neutros con leve sesgo cálido para que combinen con el rosado.
+  Paleta TG LAB: crema y blanco con coral como marca; lila y amarillo son
+  acentos pequeños.
 */
 :root {
-  --background: var(--tglab-background, #eee3d2);
-  --surface: #f8f1e6;
-  --surface-muted: #e5d7c1;
-  --foreground: #3a2b28;
-  --foreground-muted: #8b756b;
-  --border: #d9c9b0;
+  --background: var(--tglab-background, #faf7f2);
+  --surface: #ffffff;
+  --surface-muted: #f8eef2;
+  --foreground: #29272d;
+  --foreground-muted: #706b72;
+  --border: #e8e1e3;
 
   /* La marca puede sobreescribirse desde /admin (layout.tsx inyecta
      --tglab-brand-light/-dark y --tglab-accent-light/-dark). */
-  --tglab-brand: var(--tglab-brand-light, #bd527c);
+  --tglab-brand: var(--tglab-brand-light, #d95c82);
   --tglab-brand-fg: #ffffff;
-  --tglab-accent: var(--tglab-accent-light, #ef9d68);
+  --tglab-accent: var(--tglab-accent-light, #9b7ad6);
   --ring: var(--tglab-brand);
 
   color-scheme: light;
@@ -63,6 +65,7 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 
 ::selection {
@@ -74,12 +77,82 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
+button,
+a,
+input,
+textarea,
+select {
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 html {
   scroll-behavior: smooth;
 }
 
+.announcement-message {
+  animation: announcement-enter 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.announcement-sparkle {
+  animation: announcement-sparkle 700ms 180ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+@keyframes announcement-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes announcement-sparkle {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-20deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+.page-transition {
+  animation: page-enter 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .hero-content {
-  animation: hero-enter 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: hero-enter 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.section-lilac::before,
+.section-coral::before {
+  position: absolute;
+  inset: 0 calc(50% - 50vw);
+  z-index: -1;
+  content: "";
+}
+
+.section-lilac::before {
+  background: #f8f5fc;
+}
+
+.section-coral::before {
+  background: #fff5f7;
 }
 
 .reveal-ready [data-reveal],
@@ -90,6 +163,18 @@ html {
     opacity 650ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 650ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: opacity, transform;
+}
+
+.reveal-ready [data-reveal-kind="left"] {
+  transform: translateX(-20px);
+}
+
+.reveal-ready [data-reveal-kind="right"] {
+  transform: translateX(20px);
+}
+
+.reveal-ready [data-reveal-kind="scale"] {
+  transform: translateY(10px) scale(0.975);
 }
 
 .reveal-ready [data-reveal-item]:nth-child(2) {
@@ -114,6 +199,10 @@ html {
   transform: translateY(0);
 }
 
+.reveal-ready [data-reveal-kind].is-visible {
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
 @keyframes hero-enter {
   from {
     opacity: 0;
@@ -130,6 +219,11 @@ html {
   .reveal-ready [data-reveal-item] {
     transform: translateY(16px);
     transition-duration: 520ms;
+  }
+
+  .reveal-ready [data-reveal-kind="left"],
+  .reveal-ready [data-reveal-kind="right"] {
+    transform: translateY(12px);
   }
 
   .reveal-ready [data-reveal-item]:nth-child(n) {
@@ -150,6 +244,13 @@ html {
   .reveal-ready [data-reveal-item] {
     opacity: 1;
     transform: none;
+  }
+
+  .announcement-message,
+  .announcement-sparkle,
+  .page-transition {
+    animation: none !important;
+    transform: none !important;
   }
 }
 

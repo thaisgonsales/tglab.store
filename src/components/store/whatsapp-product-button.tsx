@@ -1,4 +1,5 @@
-import { WhatsappIcon } from "@/components/icons/social";
+import { FaWhatsapp } from "react-icons/fa";
+
 import { buildWhatsappUrl } from "@/lib/whatsapp";
 
 export function WhatsappProductButton({
@@ -23,7 +24,7 @@ export function WhatsappProductButton({
       rel="noopener noreferrer"
       className="border-border hover:bg-surface-muted inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm"
     >
-      <WhatsappIcon className="size-4 text-[#25D366]" />
+      <FaWhatsapp className="size-5 text-[#239b56]" aria-hidden="true" />
       Consultar por WhatsApp
     </a>
   );

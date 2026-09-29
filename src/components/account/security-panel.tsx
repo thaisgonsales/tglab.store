@@ -23,11 +23,13 @@ export function SecurityPanel({
   staff = false,
   currentId,
   twoFactorEnabled = false,
+  twoFactorRequired = false,
 }: {
   copy: AccountCopy;
   staff?: boolean;
   currentId: string;
   twoFactorEnabled?: boolean;
+  twoFactorRequired?: boolean;
 }) {
   const router = useRouter();
   const client = staff ? authClient : customerAuthClient;
@@ -107,6 +109,7 @@ export function SecurityPanel({
         setEnabled(true);
         setSetup(null);
         setMessage(copy.twoFactorEnabled);
+        if (twoFactorRequired) router.replace("/admin");
       } else if (enabled) {
         const result = await authClient.twoFactor.disable({
           password: String(data.get("password") ?? ""),
@@ -163,7 +166,11 @@ export function SecurityPanel({
         >
           <h2 className="font-semibold">{copy.twoFactor}</h2>
           <p className="text-foreground-muted text-sm">{copy.twoFactorHint}</p>
-          {setup ? (
+          {enabled && twoFactorRequired ? (
+            <p className="bg-surface-muted rounded-md p-3 text-sm">
+              {copy.twoFactorEnabled}
+            </p>
+          ) : setup ? (
             <>
               <p className="text-sm">{copy.setup2fa}</p>
               <code className="bg-surface-muted block rounded p-3 break-all">
@@ -199,13 +206,15 @@ export function SecurityPanel({
               />
             </>
           )}
-          <Button disabled={busy}>
-            {setup
-              ? copy.verifyCode
-              : enabled
-                ? copy.disable2fa
-                : copy.enable2fa}
-          </Button>
+          {!(enabled && twoFactorRequired) && (
+            <Button disabled={busy}>
+              {setup
+                ? copy.verifyCode
+                : enabled
+                  ? copy.disable2fa
+                  : copy.enable2fa}
+            </Button>
+          )}
         </form>
       )}
       <section className="bg-surface rounded-card space-y-4 border p-6">

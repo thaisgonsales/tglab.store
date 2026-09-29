@@ -42,7 +42,9 @@ productos y datos de demostración.
 2. Crear credenciales S3 limitadas a ese bucket.
 3. Conectar un dominio público al bucket; `r2.dev` es solo para pruebas.
 4. Configurar `STORAGE_DRIVER=s3`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`,
-   `S3_SECRET_ACCESS_KEY`, `S3_BUCKET` y `S3_PUBLIC_URL` en Railway.
+   `S3_SECRET_ACCESS_KEY`, `S3_BUCKET`, `S3_PRIVATE_BUCKET` y `S3_PUBLIC_URL`
+   en Railway. `S3_PRIVATE_BUCKET` debe ser un bucket distinto, sin dominio
+   público ni acceso anónimo; allí se guardan las referencias de clientes.
 5. No copiar estas credenciales al repositorio ni usar una clave global de la
    cuenta de Cloudflare.
 

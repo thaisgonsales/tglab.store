@@ -13,7 +13,10 @@ import { nextCookies } from "better-auth/next-js";
 
 import { getEnv } from "@/lib/env";
 import { db } from "@/server/db";
-import { isAuthEmailConfigured, sendAuthEmail } from "@/server/providers/auth-email";
+import {
+  isAuthEmailConfigured,
+  sendAuthEmail,
+} from "@/server/providers/auth-email";
 
 const env = getEnv();
 
@@ -40,9 +43,15 @@ export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   // La gestión pasa por servicios con protección del último propietario.
   disabledPaths: [
-    "/admin/create-user", "/admin/update-user", "/admin/set-role",
-    "/admin/remove-user", "/admin/ban-user", "/admin/unban-user",
-    "/admin/set-user-password", "/admin/impersonate-user",
+    "/admin/create-user",
+    "/admin/update-user",
+    "/admin/set-role",
+    "/admin/remove-user",
+    "/admin/ban-user",
+    "/admin/unban-user",
+    "/admin/set-user-password",
+    "/admin/impersonate-user",
+    "/two-factor/disable",
   ],
   database: prismaAdapter(db, { provider: "postgresql" }),
   emailAndPassword: {
@@ -51,21 +60,46 @@ export const auth = betterAuth({
     minPasswordLength: 10,
     maxPasswordLength: 128,
     revokeSessionsOnPasswordReset: true,
-    ...(isAuthEmailConfigured() ? {
-      sendResetPassword: async ({ user, url }: { user: { email: string }; url: string }) => sendAuthEmail(user.email, url, "reset"),
-    } : {}),
+    ...(isAuthEmailConfigured()
+      ? {
+          sendResetPassword: async ({
+            user,
+            url,
+          }: {
+            user: { email: string };
+            url: string;
+          }) => sendAuthEmail(user.email, url, "reset"),
+        }
+      : {}),
   },
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 días
     updateAge: 60 * 60 * 24, // refresca la sesión 1 vez al día
     cookieCache: { enabled: false },
   },
-  rateLimit: { enabled: true, storage: "database", modelName: "authRateLimit", window: 60, max: 60 },
+  rateLimit: {
+    enabled: true,
+    storage: "database",
+    modelName: "authRateLimit",
+    window: 60,
+    max: 60,
+  },
   databaseHooks: {
-    session: { create: { before: async (session) => {
-      const user = await db.user.findUnique({ where: { id: session.userId } });
-      if (!user?.isActive || user.banned || !["owner", "staff"].includes(user.role ?? "")) return false;
-    } } },
+    session: {
+      create: {
+        before: async (session) => {
+          const user = await db.user.findUnique({
+            where: { id: session.userId },
+          });
+          if (
+            !user?.isActive ||
+            user.banned ||
+            !["owner", "staff"].includes(user.role ?? "")
+          )
+            return false;
+        },
+      },
+    },
   },
   advanced: {
     cookiePrefix: "tglab_admin",

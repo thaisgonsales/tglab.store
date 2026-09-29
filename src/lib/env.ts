@@ -28,6 +28,7 @@ const serverEnvSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().optional().default(""),
   S3_SECRET_ACCESS_KEY: z.string().optional().default(""),
   S3_BUCKET: z.string().optional().default(""),
+  S3_PRIVATE_BUCKET: z.string().optional().default(""),
   S3_PUBLIC_URL: z.string().optional().default(""),
   UPLOAD_MAX_IMAGE_BYTES: z.coerce.number().int().positive().default(8_388_608),
   UPLOAD_MAX_VIDEO_BYTES: z.coerce

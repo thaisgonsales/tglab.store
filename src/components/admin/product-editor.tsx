@@ -35,6 +35,7 @@ import { useAction } from "@/lib/use-action";
 import {
   archiveProduct,
   deleteProduct,
+  setProductCustomizable,
   updateProduct,
 } from "@/server/actions/product-actions";
 
@@ -46,6 +47,7 @@ type ProductData = {
   type: "SIMPLE" | "VARIABLE";
   status: "DRAFT" | "PUBLISHED" | "HIDDEN";
   isFeatured: boolean;
+  isCustomizable: boolean;
   shortDescription: string;
   description: string;
   material: string;
@@ -134,6 +136,10 @@ export function ProductEditor({
   const del = useAction(() => deleteProduct(product.id), {
     onSuccess: () => router.push("/admin/productos"),
   });
+  const customizable = useAction(
+    (enabled: boolean) => setProductCustomizable(product.id, enabled),
+    { successMessage: "Sección Personalizados actualizada" },
+  );
 
   const categoryIds = watch("categoryIds") ?? [];
   const primaryCategoryId = watch("primaryCategoryId");
@@ -338,7 +344,16 @@ export function ProductEditor({
           <CardHeader>
             <CardTitle>Campos personalizados</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <ToggleRow
+              label="Mostrar este modelo en la sección Personalizados"
+              checked={product.isCustomizable}
+              onChange={(enabled) => customizable.run(enabled)}
+            />
+            <p className="text-foreground-muted text-xs">
+              Usa atributos para colores, partes, fotos y precios; utiliza los
+              campos siguientes para nombres, textos, medidas o instrucciones.
+            </p>
             <CustomFieldsSection
               productId={product.id}
               initial={customFields}

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { calculateReviewSummary } from "@/lib/review-summary";
 import { db } from "@/server/db";
 
 export async function isProductFavorite(accountId: string, productId: string) {
@@ -46,7 +47,7 @@ export async function listFavorites(accountId: string) {
 
 export async function listPublishedReviews(productId: string) {
   const reviews = await db.productReview.findMany({
-    where: { productId, status: "PUBLISHED" },
+    where: { productId, status: { in: ["APPROVED", "PUBLISHED"] } },
     orderBy: { createdAt: "desc" },
     take: 30,
     select: {
@@ -58,10 +59,47 @@ export async function listPublishedReviews(productId: string) {
       account: { select: { firstName: true, name: true } },
     },
   });
-  const average = reviews.length
-    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
-    : 0;
-  return { reviews, average, count: reviews.length };
+  return { reviews, ...calculateReviewSummary(reviews) };
+}
+
+export async function listHomeReviews(take = 6) {
+  return db.productReview.findMany({
+    where: {
+      status: { in: ["APPROVED", "PUBLISHED"] },
+      product: { status: "PUBLISHED", archivedAt: null },
+    },
+    orderBy: [{ rating: "desc" }, { createdAt: "desc" }],
+    take,
+    select: {
+      id: true,
+      rating: true,
+      title: true,
+      content: true,
+      createdAt: true,
+      account: { select: { firstName: true, name: true } },
+      product: { select: { name: true, slug: true } },
+    },
+  });
+}
+
+export async function listReviewsForAdmin(status?: string) {
+  const allowed = ["PENDING", "APPROVED", "REJECTED"] as const;
+  const selected = allowed.find((value) => value === status);
+  return db.productReview.findMany({
+    where: selected ? { status: selected } : undefined,
+    orderBy: { createdAt: "desc" },
+    take: 100,
+    select: {
+      id: true,
+      rating: true,
+      title: true,
+      content: true,
+      status: true,
+      createdAt: true,
+      account: { select: { name: true, email: true } },
+      product: { select: { name: true, slug: true } },
+    },
+  });
 }
 
 export async function getReviewableOrderItem(

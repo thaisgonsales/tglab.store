@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { FaWhatsapp } from "react-icons/fa";
 
+import { PrivacyPreferences } from "@/components/store/privacy-preferences";
 import { getInfoPage } from "@/server/services/pages-service";
 import { getSettingsGroup } from "@/server/services/settings-service";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
@@ -42,7 +44,13 @@ export async function InfoPage({ slug }: { slug: string }) {
               rel="noopener noreferrer"
               className="bg-surface rounded-card border p-6 transition-shadow hover:shadow-md"
             >
-              <p className="text-brand text-sm font-semibold">WhatsApp</p>
+              <p className="text-brand flex items-center gap-2 text-sm font-semibold">
+                <FaWhatsapp
+                  className="size-5 text-[#239b56]"
+                  aria-hidden="true"
+                />
+                WhatsApp
+              </p>
               <h2 className="mt-2 text-xl font-semibold">
                 Escríbenos directamente
               </h2>
@@ -100,9 +108,7 @@ export async function InfoPage({ slug }: { slug: string }) {
           <h2 className="text-xl font-semibold">
             También puedes escribirnos por correo
           </h2>
-          <p className="text-foreground-muted mt-2 text-sm">
-            {contact.email}
-          </p>
+          <p className="text-foreground-muted mt-2 text-sm">{contact.email}</p>
         </div>
       </div>
     );
@@ -111,25 +117,87 @@ export async function InfoPage({ slug }: { slug: string }) {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
       <h1 className="text-2xl font-semibold tracking-tight">{page.title}</h1>
-      <div className="text-foreground-muted mt-6 space-y-4 text-sm leading-relaxed">
-        {page.body.map((p, i) => (
-          <p key={i}>
-            <BoldText text={p} />
-          </p>
-        ))}
+      <div className="text-foreground-muted mt-8 space-y-4 text-[15px] leading-relaxed">
+        {renderInfoBody(page.body)}
       </div>
+      {slug === "privacidad" && <PrivacyPreferences />}
     </div>
   );
 }
 
-function BoldText({ text }: { text: string }) {
-  return text.split(/(\*\*.+?\*\*)/g).map((part, index) =>
-    part.startsWith("**") && part.endsWith("**") ? (
-      <strong key={index} className="text-foreground font-semibold">
-        {part.slice(2, -2)}
-      </strong>
-    ) : (
-      part
-    ),
-  );
+function renderInfoBody(body: string[]) {
+  const content = [];
+
+  for (let index = 0; index < body.length; index += 1) {
+    const paragraph = body[index]!;
+
+    if (paragraph.startsWith("## ")) {
+      content.push(
+        <h2
+          key={index}
+          className="text-foreground pt-5 text-xl font-semibold tracking-tight"
+        >
+          {paragraph.slice(3)}
+        </h2>,
+      );
+      continue;
+    }
+
+    if (paragraph.startsWith("- ")) {
+      const items = [];
+      let cursor = index;
+      while (cursor < body.length && body[cursor]?.startsWith("- ")) {
+        items.push(body[cursor]!.slice(2));
+        cursor += 1;
+      }
+      content.push(
+        <ul key={index} className="ml-5 list-disc space-y-2 pl-1">
+          {items.map((item, itemIndex) => (
+            <li key={itemIndex}>
+              <RichText text={item} />
+            </li>
+          ))}
+        </ul>,
+      );
+      index = cursor - 1;
+      continue;
+    }
+
+    content.push(
+      <p key={index}>
+        <RichText text={paragraph} />
+      </p>,
+    );
+  }
+
+  return content;
+}
+
+function RichText({ text }: { text: string }) {
+  return text
+    .split(/(\[\*\*.+?\*\*\]\((?:mailto:|\/).+?\)|\*\*.+?\*\*)/g)
+    .map((part, index) => {
+      const linkMatch = part.match(
+        /^\[\*\*(.+?)\*\*\]\(((?:mailto:|\/).+?)\)$/,
+      );
+      if (linkMatch) {
+        return (
+          <a
+            key={index}
+            href={linkMatch[2]}
+            className="text-brand font-semibold underline underline-offset-2"
+          >
+            {linkMatch[1]}
+          </a>
+        );
+      }
+
+      return part.startsWith("**") && part.endsWith("**") ? (
+        <strong key={index} className="text-foreground font-semibold">
+          {part.slice(2, -2)}
+        </strong>
+      ) : (
+        part
+      );
+    });
 }

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { db } from "@/server/db";
 import { sendOrderReceivedEmail } from "@/server/email/order-emails";
-import { lookupOrderTracking } from "@/server/actions/tracking-actions";
+import { lookupOrderTrackingForIp } from "@/server/actions/tracking-actions";
 
 let orderId: string;
 let orderNumber: string;
@@ -54,10 +54,13 @@ afterAll(async () => {
 
 describe("seguimiento público de pedido", () => {
   it("devuelve el timeline solo con número + email correctos", async () => {
-    const res = await lookupOrderTracking({
-      number: orderNumber,
-      email: EMAIL,
-    });
+    const res = await lookupOrderTrackingForIp(
+      {
+        number: orderNumber,
+        email: EMAIL,
+      },
+      "integration-test-correct",
+    );
     expect(res.ok).toBe(true);
     if (!res.ok || !res.data) throw new Error("sin datos");
     expect(res.data.status).toBe("En preparación");
@@ -70,18 +73,24 @@ describe("seguimiento público de pedido", () => {
   });
 
   it("rechaza si el email no coincide", async () => {
-    const res = await lookupOrderTracking({
-      number: orderNumber,
-      email: "otro@example.com",
-    });
+    const res = await lookupOrderTrackingForIp(
+      {
+        number: orderNumber,
+        email: "otro@example.com",
+      },
+      "integration-test-wrong-email",
+    );
     expect(res.ok).toBe(false);
   });
 
   it("rechaza número inexistente", async () => {
-    const res = await lookupOrderTracking({
-      number: "TG-999999",
-      email: EMAIL,
-    });
+    const res = await lookupOrderTrackingForIp(
+      {
+        number: "TG-999999",
+        email: EMAIL,
+      },
+      "integration-test-missing",
+    );
     expect(res.ok).toBe(false);
   });
 });

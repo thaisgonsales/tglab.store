@@ -102,6 +102,13 @@ test("administrador: login, equipo, contraseña y segundo factor", async ({ page
   await page.getByLabel("Correo electrónico", { exact: true }).fill(`${scope}-owner@example.com`);
   await page.getByLabel("Contraseña", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/setup-2fa$/);
+  await page.getByLabel("Contraseña actual", { exact: true }).last().fill(password);
+  await page.getByRole("button", { name: "Activar verificación en dos pasos", exact: true }).click();
+  const secretText = await page.locator("code").textContent();
+  const secret = new TextDecoder().decode(base32.decode(secretText!));
+  await page.getByLabel("Código de verificación", { exact: true }).fill(await createOTP(secret).totp());
+  await page.getByRole("button", { name: "Confirmar código", exact: true }).click();
   await expect(page).toHaveURL(/\/admin$/);
   await page.goto("/admin/equipo");
   await page.getByLabel("Nombre completo", { exact: true }).fill("Staff E2E");
@@ -115,12 +122,6 @@ test("administrador: login, equipo, contraseña y segundo factor", async ({ page
   await page.getByLabel("Repetir contraseña", { exact: true }).fill(`${password}-new`);
   await page.getByRole("button", { name: "Cambiar contraseña", exact: true }).click();
   await expect(page.getByText("Contraseña actualizada. Se cerraron las otras sesiones.")).toBeVisible();
-  await page.getByLabel("Contraseña actual", { exact: true }).last().fill(`${password}-new`);
-  await page.getByRole("button", { name: "Activar verificación en dos pasos", exact: true }).click();
-  const secretText = await page.locator("code").textContent();
-  const secret = new TextDecoder().decode(base32.decode(secretText!));
-  await page.getByLabel("Código de verificación", { exact: true }).fill(await createOTP(secret).totp());
-  await page.getByRole("button", { name: "Confirmar código", exact: true }).click();
   await expect(page.getByText("Verificación en dos pasos activada.", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Salir", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/login/);

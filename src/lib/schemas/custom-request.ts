@@ -15,8 +15,7 @@ export const customRequestSchema = z.object({
   files: z
     .array(
       z.object({
-        url: z.string().min(1).max(1000),
-        storageKey: z.string().max(500).nullable(),
+        uploadToken: z.string().min(40).max(2000),
         mimeType: z.string().max(100),
         sizeBytes: z.number().int().min(0),
       }),

@@ -12,7 +12,7 @@ export async function createOrder(input: CheckoutInput) {
     requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     requestHeaders.get("x-real-ip") ??
     "unknown";
-  const limit = rateLimit(`checkout:${ip}`, {
+  const limit = await rateLimit(`checkout:${ip}`, {
     limit: 20,
     windowMs: 60 * 60 * 1000,
   });

@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -36,6 +36,21 @@ export function ProductGallery({
   const [index, setIndex] = useState(0);
   const [zoom, setZoom] = useState(false);
   const touchStartX = useRef<number | null>(null);
+
+  useEffect(() => {
+    function showVariantMedia(event: Event) {
+      const mediaId = (event as CustomEvent<{ mediaId?: string }>).detail
+        ?.mediaId;
+      const nextIndex = media.findIndex((item) => item.id === mediaId);
+      if (nextIndex >= 0) {
+        setIndex(nextIndex);
+        setZoom(false);
+      }
+    }
+    window.addEventListener("tglab:variant-media", showVariantMedia);
+    return () =>
+      window.removeEventListener("tglab:variant-media", showVariantMedia);
+  }, [media]);
 
   if (media.length === 0) {
     return (

@@ -13,8 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { submitCustomRequest } from "@/server/actions/custom-request-actions";
 
 type RefFile = {
-  url: string;
-  storageKey: string | null;
+  uploadToken: string;
+  previewUrl: string;
   mimeType: string;
   sizeBytes: number;
 };
@@ -50,12 +50,17 @@ export function CustomRequestForm() {
           method: "POST",
           body: fd,
         });
-        const json = (await res.json()) as RefFile & { error?: string };
+        const json = (await res.json()) as Omit<RefFile, "previewUrl"> & {
+          error?: string;
+        };
         if (!res.ok) {
           toast.error(json.error ?? "No se pudo subir la imagen");
           continue;
         }
-        setFiles((f) => [...f, json]);
+        setFiles((current) => [
+          ...current,
+          { ...json, previewUrl: URL.createObjectURL(file) },
+        ]);
       }
     } finally {
       setUploading(false);
@@ -75,7 +80,11 @@ export function CustomRequestForm() {
       desiredDate: form.desiredDate || undefined,
       notes: form.notes || undefined,
       company: form.company,
-      files,
+      files: files.map(({ uploadToken, mimeType, sizeBytes }) => ({
+        uploadToken,
+        mimeType,
+        sizeBytes,
+      })),
     });
     setSubmitting(false);
     if (result.ok) {
@@ -175,11 +184,11 @@ export function CustomRequestForm() {
         <div className="mt-2 flex flex-wrap gap-2">
           {files.map((f, i) => (
             <span
-              key={f.url}
+              key={f.uploadToken}
               className="border-border relative size-20 overflow-hidden rounded-md border"
             >
               <Image
-                src={f.url}
+                src={f.previewUrl}
                 alt=""
                 fill
                 sizes="80px"
@@ -188,7 +197,12 @@ export function CustomRequestForm() {
               <button
                 type="button"
                 aria-label="Quitar"
-                onClick={() => setFiles((x) => x.filter((_, idx) => idx !== i))}
+                onClick={() =>
+                  setFiles((current) => {
+                    URL.revokeObjectURL(current[i]?.previewUrl ?? "");
+                    return current.filter((_, idx) => idx !== i);
+                  })
+                }
                 className="absolute top-0.5 right-0.5 rounded bg-black/60 p-0.5 text-white"
               >
                 <X className="size-3" />

@@ -213,6 +213,7 @@ model Product {
   type       ProductType   @default(SIMPLE)
   status     ProductStatus @default(DRAFT)
   isFeatured Boolean       @default(false)
+  isCustomizable Boolean   @default(false)
 
   shortDescription String?
   description      Json? // rich text (estructura del editor)
@@ -694,6 +695,10 @@ model ProductFavorite {
 }
 
 enum ProductReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  // Estados heredados; se conservan temporalmente para migrar sin pérdida.
   PUBLISHED
   HIDDEN
 }
@@ -709,7 +714,7 @@ model ProductReview {
   rating Int
   title String?
   content String
-  status ProductReviewStatus @default(PUBLISHED)
+  status ProductReviewStatus @default(PENDING)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1087,4 +1092,16 @@ model AuthRateLimit {
   count Int
   lastRequest BigInt
   @@map("auth_rate_limit")
+}
+
+/// Límites de uso de formularios públicos. Vive en PostgreSQL para compartir
+/// contadores entre todas las instancias y reinicios de Railway.
+model ApplicationRateLimit {
+  key       String   @id
+  count     Int
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
+  @@map("application_rate_limit")
 }

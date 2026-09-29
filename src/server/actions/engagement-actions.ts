@@ -83,3 +83,29 @@ export async function submitVerifiedReview(input: unknown) {
   revalidatePath("/cuenta/pedidos");
   return { ok: true as const };
 }
+
+const moderationSchema = z.object({
+  id: idSchema,
+  status: z.enum(["APPROVED", "REJECTED"]),
+});
+
+export async function moderateReview(input: unknown) {
+  const { staffAction, ActionError } =
+    await import("@/server/auth/action-guard");
+  return staffAction(async () => {
+    const data = moderationSchema.parse(input);
+    const review = await db.productReview.findUnique({
+      where: { id: data.id },
+      select: { product: { select: { slug: true } } },
+    });
+    if (!review) throw new ActionError("La reseña no existe.");
+    await db.productReview.update({
+      where: { id: data.id },
+      data: { status: data.status },
+    });
+    revalidatePath("/admin/resenas");
+    revalidatePath(`/producto/${review.product.slug}`);
+    revalidatePath("/");
+    return null;
+  });
+}

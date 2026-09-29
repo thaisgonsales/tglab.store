@@ -83,6 +83,7 @@ export default async function EditProductPage({
         type: product.type,
         status: product.status,
         isFeatured: product.isFeatured,
+        isCustomizable: product.isCustomizable,
         shortDescription: product.shortDescription ?? "",
         description,
         material: product.material ?? "",

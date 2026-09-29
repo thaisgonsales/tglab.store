@@ -14,6 +14,7 @@ import {
   DEFAULT_LOW_STOCK_THRESHOLD,
 } from "@/config/constants";
 import { publicEnv } from "@/lib/env";
+import { formatDateLong } from "@/lib/datetime";
 import { formatCLP } from "@/lib/money";
 import { summarizePrice } from "@/lib/product-price";
 import {
@@ -103,6 +104,7 @@ export default async function ProductPage({
     compareAtPrice: v.compareAtPrice,
     stock: v.stock,
     sku: v.sku,
+    mediaIds: v.media.map((media) => media.id),
     options: Object.fromEntries(
       v.attributeValues.map((av) => [av.attributeId, av.attributeValueId]),
     ),
@@ -206,6 +208,21 @@ export default async function ProductPage({
           <h1 className="text-2xl font-semibold tracking-tight">
             {product.name}
           </h1>
+          {reviewData.count > 0 && (
+            <a
+              href="#opiniones"
+              className="hover:text-brand mt-2 inline-flex items-center gap-2 text-sm"
+            >
+              <span className="text-brand" aria-hidden="true">
+                {"★".repeat(5)}
+              </span>
+              <strong>{reviewData.average.toFixed(1)}</strong>
+              <span className="text-foreground-muted">
+                {reviewData.count}{" "}
+                {reviewData.count === 1 ? "reseña" : "reseñas"}
+              </span>
+            </a>
+          )}
           {product.shortDescription && (
             <p className="text-foreground-muted mt-2">
               {product.shortDescription}
@@ -213,6 +230,22 @@ export default async function ProductPage({
           )}
 
           <div className="mt-6">
+            {product.isCustomizable && (
+              <div className="border-brand/25 mb-5 rounded-xl border bg-[#fff8fa] p-4 text-sm">
+                <p className="font-semibold">Revisa bien tu personalización</p>
+                <p className="text-foreground-muted mt-1 leading-relaxed">
+                  Antes de agregar, comprueba nombres, textos, colores y
+                  medidas. Si necesitas corregir algo después del pedido,
+                  contáctanos cuanto antes; podremos cambiarlo mientras la
+                  fabricación no haya comenzado.
+                </p>
+                <p className="text-foreground-muted mt-2 text-xs">
+                  Los productos elaborados según instrucciones particulares
+                  pueden quedar excluidos del retracto por cambio de opinión,
+                  sin afectar la garantía legal.
+                </p>
+              </div>
+            )}
             <ProductPurchase
               productId={product.id}
               productName={product.name}
@@ -353,10 +386,10 @@ export default async function ProductPage({
         </section>
       )}
 
-      <section className="mt-14">
+      <section id="opiniones" className="mt-14 scroll-mt-28">
         <div className="flex items-end justify-between">
           <div>
-            <h2 className="text-lg font-semibold">Reseñas verificadas</h2>
+            <h2 className="text-lg font-semibold">Opiniones de clientes</h2>
             <p className="text-foreground-muted mt-1 text-sm">
               Opiniones de clientes que compraron este producto.
             </p>
@@ -367,6 +400,30 @@ export default async function ProductPage({
             </p>
           )}
         </div>
+        {reviewData.count > 0 && (
+          <div
+            className="mt-5 max-w-sm space-y-2"
+            aria-label="Distribución de calificaciones"
+          >
+            {reviewData.distribution.map(({ rating, count }) => (
+              <div
+                key={rating}
+                className="grid grid-cols-[2.5rem_1fr_2rem] items-center gap-2 text-xs"
+              >
+                <span>{rating} ★</span>
+                <span className="bg-surface-muted h-2 overflow-hidden rounded-full">
+                  <span
+                    className="bg-brand block h-full rounded-full"
+                    style={{ width: `${(count / reviewData.count) * 100}%` }}
+                  />
+                </span>
+                <span className="text-foreground-muted text-right">
+                  {count}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
         {reviewData.reviews.length ? (
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             {reviewData.reviews.map((review) => (
@@ -394,6 +451,9 @@ export default async function ProductPage({
                     review.account.name.split(" ")[0]}{" "}
                   · Compra verificada
                 </p>
+                <time className="text-foreground-muted mt-1 block text-xs">
+                  {formatDateLong(review.createdAt)}
+                </time>
               </article>
             ))}
           </div>

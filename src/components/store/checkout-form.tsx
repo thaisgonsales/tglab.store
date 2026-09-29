@@ -47,7 +47,15 @@ export function CheckoutForm({
   pickup,
 }: {
   accountDefaults?: Partial<CheckoutFormValues>;
-  savedAddresses?: { id: string; street: string; number: string | null; apartment: string | null; region: string; comuna: string; notes: string | null }[];
+  savedAddresses?: {
+    id: string;
+    street: string;
+    number: string | null;
+    apartment: string | null;
+    region: string;
+    comuna: string;
+    notes: string | null;
+  }[];
   accountCopy: AccountCopy;
   initialQuote: Quote;
   shippingEnabled: boolean;
@@ -163,14 +171,36 @@ export function CheckoutForm({
       noValidate
     >
       <div className="space-y-8">
-        {savedAddresses.length > 0 && <div className="space-y-2"><Label htmlFor="saved-address">{accountCopy.chooseAddress}</Label><select id="saved-address" className="bg-surface h-10 w-full rounded-md border px-3 text-sm" defaultValue="" onChange={(event) => {
-          const address = savedAddresses.find((a) => a.id === event.target.value);
-          if (!address) return;
-          setValue("region", address.region); setValue("comuna", address.comuna);
-          setValue("street", address.street); setValue("number", address.number ?? "");
-          setValue("apartment", address.apartment ?? ""); setValue("addressNotes", address.notes ?? "");
-          setValue("shippingRateId", "");
-        }}><option value="">{accountCopy.manualAddress}</option>{savedAddresses.map((a) => <option key={a.id} value={a.id}>{a.street} {a.number}, {a.comuna}</option>)}</select></div>}
+        {savedAddresses.length > 0 && (
+          <div className="space-y-2">
+            <Label htmlFor="saved-address">{accountCopy.chooseAddress}</Label>
+            <select
+              id="saved-address"
+              className="bg-surface h-10 w-full rounded-md border px-3 text-sm"
+              defaultValue=""
+              onChange={(event) => {
+                const address = savedAddresses.find(
+                  (a) => a.id === event.target.value,
+                );
+                if (!address) return;
+                setValue("region", address.region);
+                setValue("comuna", address.comuna);
+                setValue("street", address.street);
+                setValue("number", address.number ?? "");
+                setValue("apartment", address.apartment ?? "");
+                setValue("addressNotes", address.notes ?? "");
+                setValue("shippingRateId", "");
+              }}
+            >
+              <option value="">{accountCopy.manualAddress}</option>
+              {savedAddresses.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.street} {a.number}, {a.comuna}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         {/* Contacto */}
         <section className="rounded-card border-border bg-surface border p-5">
           <h2 className="mb-4 text-base font-semibold">Tus datos</h2>
@@ -372,6 +402,15 @@ export function CheckoutForm({
                 <span className="text-foreground-muted">
                   {l.variantLabel ? `${l.variantLabel} · ` : ""}x{l.quantity}
                 </span>
+                {l.customizations.length > 0 && (
+                  <span className="text-foreground-muted mt-1 block space-y-0.5 text-xs">
+                    {l.customizations.map((customization) => (
+                      <span key={customization.key} className="block">
+                        {customization.label}: {customization.value}
+                      </span>
+                    ))}
+                  </span>
+                )}
               </span>
               <span className="tabular-nums">{formatCLP(l.lineTotal)}</span>
             </li>
@@ -420,12 +459,20 @@ export function CheckoutForm({
             {...register("acceptedTerms")}
           />
           <span className="text-foreground-muted">
-            Acepto los {" "}
-            <Link className="text-brand underline" href="/terminos" target="_blank">
+            Acepto los{" "}
+            <Link
+              className="text-brand underline"
+              href="/terminos"
+              target="_blank"
+            >
               términos y condiciones
             </Link>{" "}
-            y la {" "}
-            <Link className="text-brand underline" href="/privacidad" target="_blank">
+            y la{" "}
+            <Link
+              className="text-brand underline"
+              href="/privacidad"
+              target="_blank"
+            >
               política de privacidad
             </Link>
             .

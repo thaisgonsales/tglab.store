@@ -1,10 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { nanoid } from "nanoid";
 
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { putPrivateObject } from "@/server/storage/private-storage";
+import { processImage } from "@/server/upload/process-image";
+import { createPrivateUploadToken } from "@/server/upload/private-upload-token";
 import {
-  handleUpload,
   UploadValidationError,
-} from "@/server/upload/upload-service";
+  validateUpload,
+} from "@/server/upload/validate";
 
 export const runtime = "nodejs";
 
@@ -14,7 +18,7 @@ export const runtime = "nodejs";
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const ip = clientIp(req);
-  const limit = rateLimit(`custom-upload:${ip}`, {
+  const limit = await rateLimit(`custom-upload:${ip}`, {
     limit: 15,
     windowMs: 10 * 60 * 1000,
   });
@@ -38,15 +42,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const result = await handleUpload(file, {
-      folder: "solicitudes",
-      allow: ["image"],
+    const raw = Buffer.from(await file.arrayBuffer());
+    validateUpload(raw, { allow: ["image"] });
+    const image = await processImage(raw);
+    const storageKey = `solicitudes/${nanoid(21)}.${image.ext}`;
+    await putPrivateObject({
+      key: storageKey,
+      body: image.body,
+      contentType: image.contentType,
     });
     return NextResponse.json({
-      url: result.url,
-      storageKey: result.storageKey,
-      mime: result.mime,
-      sizeBytes: result.sizeBytes,
+      uploadToken: createPrivateUploadToken({
+        key: storageKey,
+        mime: "image/webp",
+        size: image.body.byteLength,
+      }),
+      mimeType: image.contentType,
+      sizeBytes: image.body.byteLength,
     });
   } catch (err) {
     if (err instanceof UploadValidationError) {

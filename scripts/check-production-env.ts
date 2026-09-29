@@ -63,6 +63,7 @@ function checkProductionEnvironment(): CheckResult {
     "S3_ACCESS_KEY_ID",
     "S3_SECRET_ACCESS_KEY",
     "S3_BUCKET",
+    "S3_PRIVATE_BUCKET",
     "S3_PUBLIC_URL",
   ] as const) {
     if (!env[key]?.trim())
@@ -71,15 +72,17 @@ function checkProductionEnvironment(): CheckResult {
   if (env.S3_PUBLIC_URL && !env.S3_PUBLIC_URL.startsWith("https://")) {
     errors.push("S3_PUBLIC_URL debe usar HTTPS.");
   }
+  if (
+    env.S3_BUCKET &&
+    env.S3_PRIVATE_BUCKET &&
+    env.S3_BUCKET === env.S3_PRIVATE_BUCKET
+  ) {
+    errors.push("S3_PRIVATE_BUCKET debe ser distinto del bucket público.");
+  }
 
   if (!env.RESEND_API_KEY) {
     warnings.push(
       "RESEND_API_KEY no está configurada: no se enviarán correos.",
-    );
-  }
-  if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) {
-    warnings.push(
-      "Upstash no está configurado: el rate limit será por instancia.",
     );
   }
   if (!env.SENTRY_DSN) {

@@ -77,17 +77,25 @@ const STATUS_LABEL: Record<string, string> = {
 export async function lookupOrderTracking(
   input: z.infer<typeof lookupSchema>,
 ): Promise<ActionResult<TrackingView | null>> {
-  const parsed = lookupSchema.safeParse(input);
-  if (!parsed.success) {
-    return { ok: false, error: "Ingresa el número de pedido y tu email." };
-  }
-
   const requestHeaders = await headers();
   const ip =
     requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     requestHeaders.get("x-real-ip") ??
     "unknown";
-  const limit = rateLimit(`tracking:${ip}`, {
+  return lookupOrderTrackingForIp(input, ip);
+}
+
+/** Núcleo comprobable sin depender del contexto HTTP propio de Next.js. */
+export async function lookupOrderTrackingForIp(
+  input: z.infer<typeof lookupSchema>,
+  ip: string,
+): Promise<ActionResult<TrackingView | null>> {
+  const parsed = lookupSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "Ingresa el número de pedido y tu email." };
+  }
+
+  const limit = await rateLimit(`tracking:${ip}`, {
     limit: 20,
     windowMs: 15 * 60 * 1000,
   });
