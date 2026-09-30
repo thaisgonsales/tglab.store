@@ -53,6 +53,32 @@ export function proxy(request: NextRequest): NextResponse {
   ].includes(pathname);
   const cookie = getSessionCookie(request, { cookiePrefix: "tglab_admin" });
 
+  const maintenanceEnabled =
+    process.env.STORE_MAINTENANCE_MODE?.toLowerCase() === "true";
+  const isMaintenanceAsset =
+    pathname.startsWith("/_next/") ||
+    /\.(?:avif|gif|ico|jpe?g|png|svg|webp|woff2?)$/i.test(pathname);
+  const isMaintenanceAllowed =
+    pathname === "/mantenimiento" ||
+    isAdmin ||
+    pathname.startsWith("/api/admin/") ||
+    pathname.startsWith("/api/auth/") ||
+    pathname.startsWith("/api/media/") ||
+    pathname === "/api/health" ||
+    isMaintenanceAsset;
+
+  if (maintenanceEnabled && !isMaintenanceAllowed) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/mantenimiento";
+    url.search = "";
+    const maintenanceResponse = NextResponse.rewrite(url, { status: 503 });
+    maintenanceResponse.headers.set("Content-Security-Policy", csp);
+    maintenanceResponse.headers.set("Cache-Control", "no-store");
+    maintenanceResponse.headers.set("Retry-After", "86400");
+    maintenanceResponse.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return maintenanceResponse;
+  }
+
   if (isAdmin && !cookie && !isLogin) {
     const url = request.nextUrl.clone();
     url.pathname = ADMIN_LOGIN_PATH;
