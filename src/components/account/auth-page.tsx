@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { AuthForm, type AuthMode } from "@/components/account/auth-form";
+import { BrandLogo } from "@/components/store/brand-logo";
 import { getSettingsGroup } from "@/server/services/settings-service";
 import { getCustomerSession } from "@/server/auth/customer-session";
 import { getStaffSession } from "@/server/auth/session";
@@ -25,9 +26,12 @@ export async function AuthPage({
   }
   return (
     <div className="mx-auto w-full max-w-lg px-4 py-12">
-      <p className="text-brand mb-6 text-center text-lg font-semibold">
-        {brand.storeName} · {staff ? copy.admin : copy.account}
-      </p>
+      <div className="mb-6 flex flex-col items-center gap-2 text-center">
+        <BrandLogo name={brand.storeName} className="h-16 sm:h-20" />
+        <p className="text-foreground-muted text-sm font-medium">
+          {staff ? copy.admin : copy.account}
+        </p>
+      </div>
       <div className="bg-surface rounded-card border p-6 shadow-sm sm:p-8">
         <Suspense fallback={<p>{copy.loading}</p>}>
           <AuthForm
