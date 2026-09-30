@@ -36,6 +36,9 @@ export const rateInputSchema = z.object({
   id: z.string().cuid().optional(),
   zoneId: z.string().cuid(),
   name: z.string().trim().min(2).max(80),
+  deliveryType: z
+    .enum(["HOME", "PICKUP_POINT", "LOCAL_DELIVERY"])
+    .default("HOME"),
   price: z.coerce.number().int().min(0).max(9_999_999),
   freeOverSubtotal: z.coerce.number().int().min(0).max(99_999_999).nullable(),
   minWeightGrams: z.coerce.number().int().min(0).max(500_000).nullable(),

@@ -32,6 +32,7 @@ type Rate = {
   minWeightGrams: number | null;
   maxWeightGrams: number | null;
   isActive: boolean;
+  deliveryType: "HOME" | "PICKUP_POINT" | "LOCAL_DELIVERY";
 };
 type Zone = {
   id: string;
@@ -254,7 +255,14 @@ function RatesEditor({ zoneId, rates }: { zoneId: string; rates: Rate[] }) {
     onSuccess: () => router.refresh(),
   });
 
-  const [draft, setDraft] = useState({ name: "", price: "", freeOver: "" });
+  const [draft, setDraft] = useState({
+    name: "",
+    price: "",
+    freeOver: "",
+    minWeight: "",
+    maxWeight: "",
+    deliveryType: "HOME" as Rate["deliveryType"],
+  });
 
   return (
     <div className="border-border mt-4 border-t pt-4">
@@ -268,6 +276,13 @@ function RatesEditor({ zoneId, rates }: { zoneId: string; rates: Rate[] }) {
             >
               <span>
                 {r.name} — <strong>{formatCLP(r.price)}</strong>
+                <Badge variant="outline" className="ml-2">
+                  {r.deliveryType === "PICKUP_POINT"
+                    ? "Punto Blue"
+                    : r.deliveryType === "LOCAL_DELIVERY"
+                      ? "Entrega local"
+                      : "Domicilio"}
+                </Badge>
                 {r.freeOverSubtotal ? (
                   <span className="text-foreground-muted">
                     {" "}
@@ -298,6 +313,23 @@ function RatesEditor({ zoneId, rates }: { zoneId: string; rates: Rate[] }) {
 
       <div className="flex flex-wrap items-end gap-2">
         <div>
+          <Label className="text-xs">Modalidad</Label>
+          <Select
+            className="w-40"
+            value={draft.deliveryType}
+            onChange={(e) =>
+              setDraft({
+                ...draft,
+                deliveryType: e.target.value as Rate["deliveryType"],
+              })
+            }
+          >
+            <option value="HOME">Domicilio</option>
+            <option value="PICKUP_POINT">Punto Blue</option>
+            <option value="LOCAL_DELIVERY">Entrega local</option>
+          </Select>
+        </div>
+        <div>
           <Label className="text-xs">Nombre</Label>
           <Input
             className="w-40"
@@ -324,6 +356,24 @@ function RatesEditor({ zoneId, rates }: { zoneId: string; rates: Rate[] }) {
             onChange={(e) => setDraft({ ...draft, freeOver: e.target.value })}
           />
         </div>
+        <div>
+          <Label className="text-xs">Peso mín. (g)</Label>
+          <Input
+            className="w-28"
+            inputMode="numeric"
+            value={draft.minWeight}
+            onChange={(e) => setDraft({ ...draft, minWeight: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Peso máx. (g)</Label>
+          <Input
+            className="w-28"
+            inputMode="numeric"
+            value={draft.maxWeight}
+            onChange={(e) => setDraft({ ...draft, maxWeight: e.target.value })}
+          />
+        </div>
         <Button
           size="sm"
           disabled={draft.name.trim().length < 2 || save.isPending}
@@ -332,14 +382,23 @@ function RatesEditor({ zoneId, rates }: { zoneId: string; rates: Rate[] }) {
               .run({
                 zoneId,
                 name: draft.name.trim(),
+                deliveryType: draft.deliveryType,
                 price: draft.price || 0,
                 freeOverSubtotal: draft.freeOver || null,
-                minWeightGrams: null,
-                maxWeightGrams: null,
+                minWeightGrams: draft.minWeight || null,
+                maxWeightGrams: draft.maxWeight || null,
                 isActive: true,
               })
               .then((r) => {
-                if (r.ok) setDraft({ name: "", price: "", freeOver: "" });
+                if (r.ok)
+                  setDraft({
+                    name: "",
+                    price: "",
+                    freeOver: "",
+                    minWeight: "",
+                    maxWeight: "",
+                    deliveryType: "HOME",
+                  });
               })
           }
         >

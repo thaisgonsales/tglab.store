@@ -1,11 +1,13 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * Flujo crítico (parte 2): carrito → checkout como invitado (retiro) →
+ * Flujo crítico (parte 2): carrito → checkout como invitado (entrega local) →
  * creación del pedido → página de pago. El pago con Mercado Pago se prueba
  * cuando se conecten las credenciales (Fase 8).
  */
-test("checkout de invitado con retiro crea un pedido", async ({ page }) => {
+test("checkout de invitado con entrega local crea un pedido", async ({
+  page,
+}) => {
   // Agrega un producto simple con stock
   await page.goto("/producto/decoracion-gamer-playstation");
   await page.getByRole("button", { name: /Agregar al carrito/i }).click();
@@ -24,8 +26,11 @@ test("checkout de invitado con retiro crea un pedido", async ({ page }) => {
     .getByLabel("Email", { exact: true })
     .fill("camila.test@example.com");
 
-  // Retiro está preseleccionado (pickupEnabled en el seed)
-  await page.getByRole("button", { name: "Retiro" }).click();
+  await page.getByLabel("Región").selectOption("Región de Los Lagos");
+  await page.getByLabel("Comuna").selectOption("Castro");
+  await page.getByLabel("Calle").fill("O'Higgins");
+  await page.getByLabel("Número").fill("123");
+  await page.getByText("Entrega personal TG LAB", { exact: true }).click();
 
   // Las condiciones son obligatorias y se validan antes de crear el pedido.
   await page.getByRole("button", { name: /Continuar al pago/i }).click();

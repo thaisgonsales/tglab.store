@@ -98,6 +98,7 @@ export function CheckoutForm({
     resolver: zodResolver(checkoutFormSchema),
     defaultValues: {
       fulfillmentMethod: pickup.enabled ? "PICKUP" : "SHIPPING",
+      shippingDeliveryType: "HOME",
       createAccount: false,
       acceptedTerms: false,
       ...accountDefaults,
@@ -110,6 +111,14 @@ export function CheckoutForm({
   const rateId = watch("shippingRateId");
   const couponCode = watch("couponCode");
   const emailValue = watch("email");
+  const selectedShipping =
+    quote.shippingOptions.find((option) => option.rateId === rateId) ??
+    quote.selectedShipping;
+  const shippingDeliveryType = selectedShipping?.deliveryType ?? "HOME";
+
+  useEffect(() => {
+    setValue("shippingDeliveryType", shippingDeliveryType);
+  }, [setValue, shippingDeliveryType]);
 
   // Recotiza cuando cambian los datos que afectan el total (con debounce
   // para el cupón y el email).
@@ -170,6 +179,7 @@ export function CheckoutForm({
       className="grid gap-8 lg:grid-cols-[1fr_20rem]"
       noValidate
     >
+      <input type="hidden" {...register("shippingDeliveryType")} />
       <div className="space-y-8">
         {savedAddresses.length > 0 && (
           <div className="space-y-2">
@@ -250,8 +260,8 @@ export function CheckoutForm({
               <MethodButton
                 active={method === "SHIPPING"}
                 onClick={() => setValue("fulfillmentMethod", "SHIPPING")}
-                title="Despacho a domicilio"
-                subtitle="Según zona"
+                title="Envío"
+                subtitle="Domicilio o Punto Blue"
               />
             )}
           </div>
@@ -272,6 +282,8 @@ export function CheckoutForm({
                     setValue("region", e.target.value);
                     setValue("comuna", "");
                     setValue("shippingRateId", undefined);
+                    setValue("pickupPointName", "");
+                    setValue("pickupPointAddress", "");
                   }}
                 >
                   <option value="">Elige una región</option>
@@ -292,26 +304,36 @@ export function CheckoutForm({
                   ))}
                 </Select>
               </FieldInput>
-              <FieldInput label="Calle" error={errors.street?.message}>
-                <Input {...register("street")} autoComplete="address-line1" />
-              </FieldInput>
-              <div className="grid grid-cols-2 gap-3">
-                <FieldInput label="Número" error={errors.number?.message}>
-                  <Input {...register("number")} />
-                </FieldInput>
-                <FieldInput label="Depto / casa">
-                  <Input {...register("apartment")} />
-                </FieldInput>
-              </div>
-              <FieldInput label="Código postal (opcional)">
-                <Input {...register("postalCode")} autoComplete="postal-code" />
-              </FieldInput>
-              <FieldInput label="Indicaciones (opcional)">
-                <Input
-                  {...register("addressNotes")}
-                  placeholder="Portón negro, etc."
-                />
-              </FieldInput>
+              {shippingDeliveryType !== "PICKUP_POINT" && (
+                <>
+                  <FieldInput label="Calle" error={errors.street?.message}>
+                    <Input
+                      {...register("street")}
+                      autoComplete="address-line1"
+                    />
+                  </FieldInput>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FieldInput label="Número" error={errors.number?.message}>
+                      <Input {...register("number")} />
+                    </FieldInput>
+                    <FieldInput label="Depto / casa">
+                      <Input {...register("apartment")} />
+                    </FieldInput>
+                  </div>
+                  <FieldInput label="Código postal (opcional)">
+                    <Input
+                      {...register("postalCode")}
+                      autoComplete="postal-code"
+                    />
+                  </FieldInput>
+                  <FieldInput label="Indicaciones (opcional)">
+                    <Input
+                      {...register("addressNotes")}
+                      placeholder="Portón negro, etc."
+                    />
+                  </FieldInput>
+                </>
+              )}
 
               {/* Opciones de despacho */}
               <div className="sm:col-span-2">
@@ -334,13 +356,22 @@ export function CheckoutForm({
                             type="radio"
                             value={opt.rateId}
                             checked={rateId === opt.rateId}
-                            onChange={() =>
-                              setValue("shippingRateId", opt.rateId)
-                            }
+                            onChange={() => {
+                              setValue("shippingRateId", opt.rateId);
+                              setValue(
+                                "shippingDeliveryType",
+                                opt.deliveryType,
+                              );
+                            }}
                           />
-                          {opt.name}
-                          <span className="text-foreground-muted">
-                            ({opt.zoneName})
+                          <span>
+                            <span className="block font-medium">
+                              {opt.name}
+                            </span>
+                            <span className="text-foreground-muted block text-xs">
+                              {deliveryTypeLabel(opt.deliveryType)} ·{" "}
+                              {opt.zoneName}
+                            </span>
                           </span>
                         </span>
                         <span className="font-medium">
@@ -354,6 +385,39 @@ export function CheckoutForm({
                   <p className="mt-1 text-xs text-red-600">
                     {errors.shippingRateId.message}
                   </p>
+                )}
+                {shippingDeliveryType === "PICKUP_POINT" && (
+                  <div className="border-brand/20 mt-4 rounded-md border p-4">
+                    <p className="text-sm font-medium">
+                      Elige tu Punto Blue Express
+                    </p>
+                    <p className="text-foreground-muted mt-1 text-xs">
+                      Busca el punto más cercano, copia su nombre y dirección y
+                      vuelve a completar estos campos.
+                    </p>
+                    <a
+                      href="https://mapa-pickup.blue.cl/?client-services=34"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-brand mt-2 inline-block text-sm font-medium underline"
+                    >
+                      Abrir buscador oficial de Puntos Blue
+                    </a>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <FieldInput
+                        label="Nombre del Punto Blue"
+                        error={errors.pickupPointName?.message}
+                      >
+                        <Input {...register("pickupPointName")} />
+                      </FieldInput>
+                      <FieldInput
+                        label="Dirección del Punto Blue"
+                        error={errors.pickupPointAddress?.message}
+                      >
+                        <Input {...register("pickupPointAddress")} />
+                      </FieldInput>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -526,6 +590,14 @@ function MethodButton({
       <span className="text-foreground-muted block text-xs">{subtitle}</span>
     </button>
   );
+}
+
+function deliveryTypeLabel(
+  deliveryType: "HOME" | "PICKUP_POINT" | "LOCAL_DELIVERY",
+) {
+  if (deliveryType === "PICKUP_POINT") return "Retiro en Punto Blue";
+  if (deliveryType === "LOCAL_DELIVERY") return "Entrega local";
+  return "Entrega a domicilio";
 }
 
 function FieldInput({

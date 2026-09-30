@@ -52,8 +52,22 @@ export default async function OrderPrintPage({
           </p>
           {order.fulfillmentMethod === "PICKUP" ? (
             <p>Retiro en tienda</p>
+          ) : order.shippingDeliveryType === "PICKUP_POINT" ? (
+            <>
+              <p>Retiro en Punto Blue Express</p>
+              <p>{order.pickupPointName}</p>
+              <p>{order.pickupPointAddress}</p>
+              <p>
+                {order.comuna}, {order.region}
+              </p>
+            </>
           ) : address ? (
             <>
+              <p>
+                {order.shippingDeliveryType === "LOCAL_DELIVERY"
+                  ? "Entrega personal TG LAB"
+                  : "Blue Express a domicilio"}
+              </p>
               <p>
                 {address.street} {address.number}
                 {address.apartment ? `, ${address.apartment}` : ""}

@@ -50,9 +50,10 @@ async function buildAndSend(
   ]);
 
   const addr = order.shippingAddress as Record<string, string> | null;
-  const shippingAddress = addr
-    ? `${addr.street ?? ""} ${addr.number ?? ""}${addr.apartment ? `, ${addr.apartment}` : ""}, ${addr.comuna ?? ""}, ${addr.region ?? ""}`.trim()
-    : null;
+  const shippingAddress =
+    addr && order.shippingDeliveryType !== "PICKUP_POINT"
+      ? `${addr.street ?? ""} ${addr.number ?? ""}${addr.apartment ? `, ${addr.apartment}` : ""}, ${addr.comuna ?? ""}, ${addr.region ?? ""}`.trim()
+      : null;
 
   const data: OrderEmailData = {
     kind,
@@ -70,7 +71,14 @@ async function buildAndSend(
     shippingTotal: order.shippingTotal,
     grandTotal: order.grandTotal,
     fulfillmentMethod: order.fulfillmentMethod,
+    shippingDeliveryType: order.shippingDeliveryType,
     shippingAddress,
+    pickupPoint:
+      order.shippingDeliveryType === "PICKUP_POINT"
+        ? [order.pickupPointName, order.pickupPointAddress]
+            .filter(Boolean)
+            .join(" · ")
+        : null,
     pickupInfo: contact.addressPublic || commerce.pickupInstructions || null,
     trackingCarrier: order.carrier,
     trackingNumber: order.trackingNumber,

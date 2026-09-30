@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
+import type { z } from "zod";
 
 import {
   rateInputSchema,
@@ -91,6 +91,7 @@ export async function saveRate(input: z.input<typeof rateInputSchema>) {
         where: { id: data.id },
         data: {
           name: data.name,
+          deliveryType: data.deliveryType,
           price: data.price,
           freeOverSubtotal: data.freeOverSubtotal,
           minWeightGrams: data.minWeightGrams,
@@ -107,6 +108,7 @@ export async function saveRate(input: z.input<typeof rateInputSchema>) {
         data: {
           zoneId: data.zoneId,
           name: data.name,
+          deliveryType: data.deliveryType,
           price: data.price,
           freeOverSubtotal: data.freeOverSubtotal,
           minWeightGrams: data.minWeightGrams,

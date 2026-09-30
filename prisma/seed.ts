@@ -33,7 +33,7 @@ async function seedSettings() {
       key: "commerce",
       value: {
         ...defaults.commerce,
-        pickupEnabled: true,
+        pickupEnabled: false,
         bankTransferInstructions:
           "[DEMO] Datos de ejemplo — reemplázalos en /admin/configuracion.",
         bankTransferDetails: {

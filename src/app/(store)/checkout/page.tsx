@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { getCustomerSession } from "@/server/auth/customer-session";
-import { getCustomerProfile, listCustomerAddresses } from "@/server/services/customer-account-service";
+import {
+  getCustomerProfile,
+  listCustomerAddresses,
+} from "@/server/services/customer-account-service";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
@@ -21,7 +24,7 @@ export default async function CheckoutPage() {
   ]);
   const cartToken = await getCartToken();
   const quote = cartToken
-    ? await quoteCart({ cartToken, fulfillmentMethod: "PICKUP" })
+    ? await quoteCart({ cartToken, fulfillmentMethod: "SHIPPING" })
     : null;
 
   if (!quote || quote.isEmpty) {
@@ -43,13 +46,41 @@ export default async function CheckoutPage() {
         No necesitas crear una cuenta. Todos los precios incluyen IVA.
       </p>
 
-      <div className="bg-surface mt-6 rounded-md border p-4 text-sm">{session ? account.checkoutAccount : <><Link className="text-brand underline" href="/cuenta/login?next=/checkout">{account.checkoutLogin}</Link><p className="text-foreground-muted mt-1">{account.checkoutGuest}</p></>}</div>
+      <div className="bg-surface mt-6 rounded-md border p-4 text-sm">
+        {session ? (
+          account.checkoutAccount
+        ) : (
+          <>
+            <Link
+              className="text-brand underline"
+              href="/cuenta/login?next=/checkout"
+            >
+              {account.checkoutLogin}
+            </Link>
+            <p className="text-foreground-muted mt-1">
+              {account.checkoutGuest}
+            </p>
+          </>
+        )}
+      </div>
       <div className="mt-6">
         <CheckoutForm
           initialQuote={quote}
           accountCopy={account}
           savedAddresses={addresses}
-          accountDefaults={profile ? { firstName: profile.firstName || profile.name.split(" ")[0], lastName: profile.lastName || profile.name.split(" ").slice(1).join(" "), email: profile.email, phone: profile.phone, rut: profile.rut } : undefined}
+          accountDefaults={
+            profile
+              ? {
+                  firstName: profile.firstName || profile.name.split(" ")[0],
+                  lastName:
+                    profile.lastName ||
+                    profile.name.split(" ").slice(1).join(" "),
+                  email: profile.email,
+                  phone: profile.phone,
+                  rut: profile.rut,
+                }
+              : undefined
+          }
           shippingEnabled={fulfillment.hasShipping}
           pickup={{
             enabled: commerce.pickupEnabled,

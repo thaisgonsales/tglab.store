@@ -93,6 +93,18 @@ export async function createOrder(
         "No hay despacho disponible para esa dirección. Prueba con retiro.",
       );
     }
+    if (
+      quote.selectedShipping &&
+      data.shippingDeliveryType !== quote.selectedShipping.deliveryType
+    ) {
+      throw new ActionError("La modalidad de despacho seleccionada cambió.");
+    }
+    if (
+      quote.selectedShipping?.deliveryType === "PICKUP_POINT" &&
+      (!data.pickupPointName || !data.pickupPointAddress)
+    ) {
+      throw new ActionError("Indica el Punto Blue donde retirarás el pedido.");
+    }
 
     const rut = normalizeRut(data.rut);
     const payableLines = quote.lines.filter((l) => l.available);
@@ -157,6 +169,21 @@ export async function createOrder(
           shippingRateName: quote.selectedShipping
             ? `${quote.selectedShipping.zoneName} — ${quote.selectedShipping.name}`
             : null,
+          shippingDeliveryType: quote.selectedShipping?.deliveryType ?? null,
+          pickupPointName:
+            quote.selectedShipping?.deliveryType === "PICKUP_POINT"
+              ? data.pickupPointName
+              : null,
+          pickupPointAddress:
+            quote.selectedShipping?.deliveryType === "PICKUP_POINT"
+              ? data.pickupPointAddress
+              : null,
+          carrier:
+            quote.selectedShipping?.deliveryType === "LOCAL_DELIVERY"
+              ? "TG LAB"
+              : quote.selectedShipping
+                ? "Blue Express"
+                : null,
           currency: "CLP",
           subtotal: quote.subtotal,
           discountTotal: quote.discountTotal,

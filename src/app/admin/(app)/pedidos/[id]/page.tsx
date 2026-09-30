@@ -134,8 +134,24 @@ export default async function AdminOrderDetailPage({
           <CardContent className="space-y-1 text-sm">
             {order.fulfillmentMethod === "PICKUP" ? (
               <p>Retiro en tienda</p>
+            ) : order.shippingDeliveryType === "PICKUP_POINT" ? (
+              <>
+                <p className="font-medium">Retiro en Punto Blue Express</p>
+                <p>{order.pickupPointName}</p>
+                <p className="text-foreground-muted">
+                  {order.pickupPointAddress}
+                </p>
+                <p className="text-foreground-muted">
+                  {order.comuna}, {order.region}
+                </p>
+              </>
             ) : address ? (
               <>
+                <p className="font-medium">
+                  {order.shippingDeliveryType === "LOCAL_DELIVERY"
+                    ? "Entrega personal TG LAB"
+                    : "Blue Express a domicilio"}
+                </p>
                 <p>
                   {address.street} {address.number}
                   {address.apartment ? `, ${address.apartment}` : ""}

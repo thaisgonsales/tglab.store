@@ -44,6 +44,7 @@ export default async function AdminShippingPage() {
             minWeightGrams: r.minWeightGrams,
             maxWeightGrams: r.maxWeightGrams,
             isActive: r.isActive,
+            deliveryType: r.deliveryType,
           })),
         }))}
       />

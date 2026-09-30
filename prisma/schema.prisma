@@ -550,6 +550,12 @@ enum FulfillmentMethod {
   PICKUP
 }
 
+enum ShippingDeliveryType {
+  HOME
+  PICKUP_POINT
+  LOCAL_DELIVERY
+}
+
 model Order {
   accountId String?
   account CustomerUser? @relation(fields: [accountId], references: [id], onDelete: SetNull)
@@ -580,6 +586,9 @@ model Order {
   comuna            String?
   shippingRateId    String?
   shippingRateName  String?
+  shippingDeliveryType ShippingDeliveryType?
+  pickupPointName       String?
+  pickupPointAddress    String?
   carrier           String?
   trackingNumber    String?
   trackingUrl       String?
@@ -943,6 +952,7 @@ model ShippingRate {
   zone   ShippingZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
   name             String
+  deliveryType     ShippingDeliveryType @default(HOME)
   price            Int
   freeOverSubtotal Int?
   minWeightGrams   Int?

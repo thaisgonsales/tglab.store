@@ -15,6 +15,7 @@ export type ShippingOption = {
   zoneId: string;
   zoneName: string;
   name: string;
+  deliveryType: "HOME" | "PICKUP_POINT" | "LOCAL_DELIVERY";
   price: number;
   /** true si el precio quedó en 0 por superar `freeOverSubtotal`. */
   free: boolean;
@@ -72,6 +73,7 @@ export async function getShippingOptions(
         zoneId: zone.id,
         zoneName: zone.name,
         name: rate.name,
+        deliveryType: rate.deliveryType,
         price: free ? 0 : rate.price,
         free: free || rate.price === 0,
       });

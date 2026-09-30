@@ -29,6 +29,11 @@ const baseObject = z.object({
   postalCode: z.string().trim().max(12).optional(),
   addressNotes: z.string().trim().max(400).optional(),
   shippingRateId: z.string().cuid().optional().or(z.literal("")),
+  shippingDeliveryType: z
+    .enum(["HOME", "PICKUP_POINT", "LOCAL_DELIVERY"])
+    .default("HOME"),
+  pickupPointName: z.string().trim().max(120).optional(),
+  pickupPointAddress: z.string().trim().max(200).optional(),
 
   couponCode: z.string().trim().max(40).optional(),
   customerNote: z.string().trim().max(500).optional(),
@@ -63,14 +68,14 @@ const crossValidate = (
         message: "La comuna no corresponde a la región",
       });
     }
-    if (!data.street) {
+    if (data.shippingDeliveryType !== "PICKUP_POINT" && !data.street) {
       ctx.addIssue({
         code: "custom",
         path: ["street"],
         message: "Ingresa la calle",
       });
     }
-    if (!data.number) {
+    if (data.shippingDeliveryType !== "PICKUP_POINT" && !data.number) {
       ctx.addIssue({
         code: "custom",
         path: ["number"],
@@ -82,6 +87,23 @@ const crossValidate = (
         code: "custom",
         path: ["shippingRateId"],
         message: "Elige una opción de despacho",
+      });
+    }
+    if (data.shippingDeliveryType === "PICKUP_POINT" && !data.pickupPointName) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["pickupPointName"],
+        message: "Indica el Punto Blue elegido",
+      });
+    }
+    if (
+      data.shippingDeliveryType === "PICKUP_POINT" &&
+      !data.pickupPointAddress
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["pickupPointAddress"],
+        message: "Ingresa la dirección del Punto Blue",
       });
     }
   }

@@ -160,7 +160,7 @@ export const commerceSettingsSchema = z.object({
     .min(0)
     .default(DEFAULT_LAST_UNITS_THRESHOLD),
   freeShippingOverSubtotal: z.number().int().min(0).nullable().default(null),
-  pickupEnabled: z.boolean().default(true),
+  pickupEnabled: z.boolean().default(false),
   pickupInstructions: z
     .string()
     .default(

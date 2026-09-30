@@ -37,7 +37,9 @@ export type OrderEmailData = {
   shippingTotal: number;
   grandTotal: number;
   fulfillmentMethod: "SHIPPING" | "PICKUP";
+  shippingDeliveryType: "HOME" | "PICKUP_POINT" | "LOCAL_DELIVERY" | null;
   shippingAddress: string | null;
+  pickupPoint: string | null;
   pickupInfo: string | null;
   trackingCarrier: string | null;
   trackingNumber: string | null;
@@ -165,6 +167,12 @@ export function OrderEmail(d: OrderEmailData) {
             <>
               <Hr style={{ borderColor: "#ece2d2", margin: "16px 0" }} />
               <Text style={muted}>Envío a: {d.shippingAddress}</Text>
+            </>
+          )}
+          {d.fulfillmentMethod === "SHIPPING" && d.pickupPoint && (
+            <>
+              <Hr style={{ borderColor: "#ece2d2", margin: "16px 0" }} />
+              <Text style={muted}>Retiro en Punto Blue: {d.pickupPoint}</Text>
             </>
           )}
           {d.fulfillmentMethod === "PICKUP" && d.pickupInfo && (
