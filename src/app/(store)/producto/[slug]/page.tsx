@@ -87,15 +87,23 @@ export default async function ProductPage({
     product.categories.find((c) => c.isPrimary)?.category ??
     product.categories[0]?.category;
 
+  const activeValueIds = new Set(
+    product.variants.flatMap((variant) =>
+      variant.attributeValues.map((value) => value.attributeValueId),
+    ),
+  );
   const attributes = product.attributes.map((pa) => ({
     id: pa.attributeId,
     name: pa.attribute.name,
     type: pa.attribute.type,
-    values: pa.attribute.values.map((v) => ({
-      id: v.id,
-      label: v.label,
-      hex: v.hex,
-    })),
+    // No mostrar colores globales que este producto no ofrece.
+    values: pa.attribute.values
+      .filter((value) => activeValueIds.has(value.id))
+      .map((v) => ({
+        id: v.id,
+        label: v.label,
+        hex: v.hex,
+      })),
   }));
 
   const variants = product.variants.map((v) => ({

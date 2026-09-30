@@ -35,6 +35,7 @@ import {
   addProductMedia,
   deleteProductMedia,
   reorderProductMedia,
+  setProductMediaVariant,
   setPrimaryMedia,
 } from "@/server/actions/media-actions";
 import type { UploadResult } from "@/server/upload/upload-service";
@@ -47,14 +48,19 @@ export type MediaItem = {
   posterUrl: string | null;
   alt: string | null;
   isPrimary: boolean;
+  variantId: string | null;
 };
+
+export type MediaVariantOption = { id: string; label: string };
 
 export function MediaManager({
   productId,
   initialMedia,
+  variants,
 }: {
   productId: string;
   initialMedia: MediaItem[];
+  variants: MediaVariantOption[];
 }) {
   const [media, setMedia] = useState<MediaItem[]>(initialMedia);
   const [uploading, setUploading] = useState(false);
@@ -71,6 +77,9 @@ export function MediaManager({
   });
   const makePrimary = useAction(setPrimaryMedia, {
     successMessage: "Imagen principal actualizada",
+  });
+  const assignVariant = useAction(setProductMediaVariant, {
+    successMessage: "Foto de variante actualizada",
   });
   const addVideo = useAction(addExternalVideo, {
     successMessage: "Video agregado",
@@ -113,6 +122,7 @@ export function MediaManager({
               posterUrl: null,
               alt: null,
               isPrimary: m.length === 0 && json.kind !== "video",
+              variantId: null,
             },
           ]);
         } else {
@@ -163,6 +173,7 @@ export function MediaManager({
           posterUrl: null,
           alt: null,
           isPrimary: false,
+          variantId: null,
         },
       ]);
       setVideoUrl("");
@@ -230,6 +241,22 @@ export function MediaManager({
                   item={item}
                   onDelete={() => handleDelete(item.id)}
                   onPrimary={() => handlePrimary(item.id)}
+                  variants={variants}
+                  onVariantChange={async (variantId) => {
+                    const result = await assignVariant.run({
+                      mediaId: item.id,
+                      variantId: variantId || null,
+                    });
+                    if (result.ok) {
+                      setMedia((current) =>
+                        current.map((entry) =>
+                          entry.id === item.id
+                            ? { ...entry, variantId: variantId || null }
+                            : entry,
+                        ),
+                      );
+                    }
+                  }}
                 />
               ))}
             </ul>
@@ -260,10 +287,14 @@ function SortableMedia({
   item,
   onDelete,
   onPrimary,
+  variants,
+  onVariantChange,
 }: {
   item: MediaItem;
   onDelete: () => void;
   onPrimary: () => void;
+  variants: MediaVariantOption[];
+  onVariantChange: (variantId: string) => void;
 }) {
   const {
     attributes,
@@ -335,6 +366,26 @@ function SortableMedia({
         <span className="bg-brand text-brand-fg absolute bottom-1 left-1 rounded px-1.5 py-0.5 text-[10px] font-medium">
           Principal
         </span>
+      )}
+      {item.type === "IMAGE" && variants.length > 0 && (
+        <div className="border-border bg-surface border-t p-2">
+          <label className="text-foreground-muted mb-1 block text-[11px] font-medium">
+            Foto para variante
+          </label>
+          <select
+            value={item.variantId ?? ""}
+            onChange={(event) => onVariantChange(event.target.value)}
+            className="border-border bg-surface h-8 w-full rounded border px-2 text-xs"
+            aria-label="Asignar foto a variante"
+          >
+            <option value="">General (todas)</option>
+            {variants.map((variant) => (
+              <option key={variant.id} value={variant.id}>
+                {variant.label}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
     </li>
   );

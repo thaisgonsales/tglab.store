@@ -68,9 +68,22 @@ export function ProductPurchase({
     [variants, selection, attributes],
   );
 
-  const variantMediaId = variants.find(
-    (candidate) => candidate.id === variant?.id,
-  )?.mediaIds?.[0];
+  const variantMediaId = useMemo(() => {
+    const exact = variants.find((candidate) => candidate.id === variant?.id);
+    if (exact?.mediaIds?.[0]) return exact.mediaIds[0];
+
+    // Una foto debe reaccionar desde el primer clic (por ejemplo, Color:
+    // Verde), aunque todavía falte escoger otra opción como tamaño.
+    const partial = variants.find(
+      (candidate) =>
+        candidate.mediaIds?.length &&
+        Object.entries(selection).every(
+          ([attributeId, valueId]) =>
+            candidate.options[attributeId] === valueId,
+        ),
+    );
+    return partial?.mediaIds?.[0];
+  }, [selection, variant?.id, variants]);
 
   useEffect(() => {
     const mediaId = variantMediaId;
@@ -181,6 +194,7 @@ export function ProductPurchase({
                       onClick={() => select(attr.id, v.id)}
                       aria-label={v.label}
                       aria-pressed={isOn}
+                      disabled={isDisabled}
                       title={v.label}
                       className={cn(
                         "flex items-center gap-2 rounded-full border py-1.5 pr-3 pl-1.5 text-sm transition-colors",

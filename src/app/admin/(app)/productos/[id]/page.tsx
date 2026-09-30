@@ -99,6 +99,7 @@ export default async function EditProductPage({
         price: variant?.price ?? 0,
         compareAtPrice: variant?.compareAtPrice ?? null,
         stock: variant?.stock ?? 0,
+        archived: Boolean(product.archivedAt),
         categoryIds: product.categories.map((c) => c.categoryId),
         primaryCategoryId:
           product.categories.find((c) => c.isPrimary)?.categoryId ??
@@ -112,6 +113,7 @@ export default async function EditProductPage({
         posterUrl: m.posterUrl,
         alt: m.alt,
         isPrimary: m.isPrimary,
+        variantId: m.variantId,
       }))}
     />
   );

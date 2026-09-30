@@ -130,6 +130,44 @@ export async function setPrimaryMedia(mediaId: string) {
   });
 }
 
+const mediaVariantSchema = z.object({
+  mediaId: z.string().cuid(),
+  variantId: z.string().cuid().nullable(),
+});
+
+/** Asocia una foto a la combinación que debe mostrarla en la tienda. */
+export async function setProductMediaVariant(input: {
+  mediaId: string;
+  variantId: string | null;
+}) {
+  return staffAction(async () => {
+    const data = mediaVariantSchema.parse(input);
+    const media = await db.productMedia.findUnique({
+      where: { id: data.mediaId },
+      select: { productId: true, type: true },
+    });
+    if (!media) throw new ActionError("La imagen no existe.");
+    if (media.type !== "IMAGE") {
+      throw new ActionError("Solo las imágenes pueden asociarse a variantes.");
+    }
+    if (data.variantId) {
+      const variant = await db.productVariant.findFirst({
+        where: { id: data.variantId, productId: media.productId },
+        select: { id: true },
+      });
+      if (!variant) {
+        throw new ActionError("La variante no pertenece a este producto.");
+      }
+    }
+    await db.productMedia.update({
+      where: { id: data.mediaId },
+      data: { variantId: data.variantId },
+    });
+    revalidate(media.productId);
+    return null;
+  });
+}
+
 export async function updateMediaAlt(mediaId: string, alt: string) {
   return staffAction(async () => {
     const media = await db.productMedia.findUnique({

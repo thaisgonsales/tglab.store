@@ -123,6 +123,11 @@ export async function generateVariants(input: {
     if (!product) throw new ActionError("El producto no existe.");
 
     const assigned = new Set(product.attributes.map((a) => a.attributeId));
+    if (selection.length !== assigned.size) {
+      throw new ActionError(
+        "Selecciona al menos un valor para cada atributo del producto.",
+      );
+    }
     for (const s of selection) {
       if (!assigned.has(s.attributeId)) {
         throw new ActionError(

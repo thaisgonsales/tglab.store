@@ -105,20 +105,45 @@ export async function updateProduct(id: string, input: ProductUpdateInput) {
     const data = productUpdateSchema.parse(input);
     const product = await db.product.findUnique({
       where: { id },
-      include: { variants: { orderBy: { position: "asc" } }, categories: true },
+      include: {
+        variants: {
+          orderBy: { position: "asc" },
+          include: { attributeValues: { select: { attributeId: true } } },
+        },
+        attributes: true,
+        categories: true,
+      },
     });
     if (!product) throw new ActionError("El producto no existe.");
-    if (product.type === "VARIABLE") {
-      throw new ActionError(
-        "Este producto tiene variantes; edita precio y stock desde la sección de variantes (Fase 4).",
-      );
-    }
-
     const defaultVariant = product.variants[0];
     if (!defaultVariant)
       throw new ActionError("El producto no tiene variante base.");
 
-    if (data.compareAtPrice !== null && data.compareAtPrice <= data.price) {
+    if (data.status === "PUBLISHED" && product.type === "VARIABLE") {
+      const active = product.variants.filter((variant) => variant.isActive);
+      if (active.length === 0) {
+        throw new ActionError(
+          "Activa al menos una variante antes de publicar el producto.",
+        );
+      }
+      if (
+        product.attributes.length === 0 ||
+        active.some(
+          (variant) =>
+            variant.attributeValues.length !== product.attributes.length,
+        )
+      ) {
+        throw new ActionError(
+          "Completa las combinaciones de todos los atributos antes de publicar.",
+        );
+      }
+    }
+
+    if (
+      product.type === "SIMPLE" &&
+      data.compareAtPrice !== null &&
+      data.compareAtPrice <= data.price
+    ) {
       throw new ActionError(
         "El precio anterior debe ser mayor que el precio actual.",
       );
@@ -188,32 +213,33 @@ export async function updateProduct(id: string, input: ProductUpdateInput) {
         });
       }
 
-      // Precio de la variante base
-      await tx.productVariant.update({
-        where: { id: defaultVariant.id },
-        data: {
-          sku: data.sku || null,
-          price: data.price,
-          compareAtPrice: data.compareAtPrice,
-          weightGrams: data.weightGrams ?? null,
-        },
-      });
-
-      // Ajuste de stock con registro
-      if (data.stock !== defaultVariant.stock) {
+      // En productos variables, precio, SKU y stock se administran por
+      // combinación. Guardar la ficha general no debe sobrescribirlos.
+      if (product.type === "SIMPLE") {
         await tx.productVariant.update({
           where: { id: defaultVariant.id },
-          data: { stock: data.stock },
+          data: {
+            sku: data.sku || null,
+            price: data.price,
+            compareAtPrice: data.compareAtPrice,
+            weightGrams: data.weightGrams ?? null,
+          },
         });
-        await recordMovement(tx, {
-          variantId: defaultVariant.id,
-          type: data.stock > defaultVariant.stock ? "RESTOCK" : "ADJUSTMENT",
-          quantityDelta: data.stock - defaultVariant.stock,
-          stockBefore: defaultVariant.stock,
-          stockAfter: data.stock,
-          reason: "Ajuste manual desde el panel",
-          adminUserId: session.user.id,
-        });
+        if (data.stock !== defaultVariant.stock) {
+          await tx.productVariant.update({
+            where: { id: defaultVariant.id },
+            data: { stock: data.stock },
+          });
+          await recordMovement(tx, {
+            variantId: defaultVariant.id,
+            type: data.stock > defaultVariant.stock ? "RESTOCK" : "ADJUSTMENT",
+            quantityDelta: data.stock - defaultVariant.stock,
+            stockBefore: defaultVariant.stock,
+            stockAfter: data.stock,
+            reason: "Ajuste manual desde el panel",
+            adminUserId: session.user.id,
+          });
+        }
       }
     });
 
@@ -227,8 +253,31 @@ export async function setProductStatus(
   status: "DRAFT" | "PUBLISHED" | "HIDDEN",
 ) {
   return staffAction(async () => {
-    const product = await db.product.findUnique({ where: { id } });
+    const product = await db.product.findUnique({
+      where: { id },
+      include: {
+        attributes: true,
+        variants: {
+          where: { isActive: true },
+          include: { attributeValues: { select: { attributeId: true } } },
+        },
+      },
+    });
     if (!product) throw new ActionError("El producto no existe.");
+    if (status === "PUBLISHED" && product.type === "VARIABLE") {
+      if (
+        product.variants.length === 0 ||
+        product.attributes.length === 0 ||
+        product.variants.some(
+          (variant) =>
+            variant.attributeValues.length !== product.attributes.length,
+        )
+      ) {
+        throw new ActionError(
+          "Completa y activa las combinaciones de variantes antes de publicar.",
+        );
+      }
+    }
     await db.product.update({
       where: { id },
       data: {
@@ -348,9 +397,15 @@ export async function duplicateProduct(id: string) {
 
 export async function archiveProduct(id: string, archived: boolean) {
   return staffAction(async () => {
+    const product = await db.product.findUnique({ where: { id } });
+    if (!product) throw new ActionError("El producto no existe.");
     await db.product.update({
       where: { id },
-      data: { archivedAt: archived ? new Date() : null },
+      data: {
+        archivedAt: archived ? new Date() : null,
+        // Un producto archivado nunca debe seguir accesible en la tienda.
+        ...(archived ? { status: "HIDDEN" as const } : {}),
+      },
     });
     revalidateProduct(id);
     return null;
@@ -367,9 +422,7 @@ export async function deleteProduct(id: string) {
         data: { archivedAt: new Date(), status: "HIDDEN" },
       });
       revalidateProduct(id);
-      throw new ActionError(
-        "Este producto tiene ventas asociadas: se archivó en lugar de eliminarse (los pedidos históricos se conservan).",
-      );
+      return { deleted: false, archived: true };
     }
 
     const media = await db.productMedia.findMany({
@@ -380,6 +433,6 @@ export async function deleteProduct(id: string) {
     for (const m of media) await deleteStored(m.storageKey);
 
     revalidateProduct();
-    return null;
+    return { deleted: true, archived: false };
   });
 }

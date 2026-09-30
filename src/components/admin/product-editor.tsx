@@ -63,6 +63,7 @@ type ProductData = {
   price: number;
   compareAtPrice: number | null;
   stock: number;
+  archived: boolean;
   categoryIds: string[];
   primaryCategoryId?: string;
 };
@@ -131,7 +132,12 @@ export function ProductEditor({
   );
   const archive = useAction(
     (archived: boolean) => archiveProduct(product.id, archived),
-    { successMessage: "Producto archivado", onSuccess: () => router.refresh() },
+    {
+      successMessage: product.archived
+        ? "Producto restaurado"
+        : "Producto archivado",
+      onSuccess: () => router.refresh(),
+    },
   );
   const del = useAction(() => deleteProduct(product.id), {
     onSuccess: () => router.push("/admin/productos"),
@@ -366,7 +372,16 @@ export function ProductEditor({
             <CardTitle>Fotos y videos</CardTitle>
           </CardHeader>
           <CardContent>
-            <MediaManager productId={product.id} initialMedia={media} />
+            <MediaManager
+              productId={product.id}
+              initialMedia={media}
+              variants={variants.map((variant) => ({
+                id: variant.id,
+                label: variant.optionLabels
+                  .map((option) => `${option.attribute}: ${option.value}`)
+                  .join(" · "),
+              }))}
+            />
           </CardContent>
         </Card>
 
@@ -444,17 +459,28 @@ export function ProductEditor({
             <CardTitle>Acciones</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
-            <ConfirmDialog
-              title="Archivar producto"
-              description="El producto deja de mostrarse en la tienda pero se conserva junto a su historial. Podrás restaurarlo."
-              confirmLabel="Archivar"
-              onConfirm={() => archive.run(true)}
-              trigger={
-                <Button type="button" variant="outline">
-                  Archivar
-                </Button>
-              }
-            />
+            {product.archived ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => archive.run(false)}
+                disabled={archive.isPending}
+              >
+                Restaurar producto
+              </Button>
+            ) : (
+              <ConfirmDialog
+                title="Archivar producto"
+                description="El producto se inactivará y dejará de mostrarse en la tienda, pero conservará su historial. Podrás restaurarlo."
+                confirmLabel="Archivar"
+                onConfirm={() => archive.run(true)}
+                trigger={
+                  <Button type="button" variant="outline">
+                    Archivar / remover
+                  </Button>
+                }
+              />
+            )}
             <ConfirmDialog
               title="Eliminar producto"
               description="Solo se puede eliminar si nunca tuvo ventas. Si las tuvo, se archivará automáticamente para no perder los pedidos."

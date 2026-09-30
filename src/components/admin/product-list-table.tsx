@@ -1,10 +1,12 @@
 "use client";
 
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Copy, MoreVertical } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +15,8 @@ import { Select } from "@/components/ui/select";
 import { formatCLP } from "@/lib/money";
 import { useAction } from "@/lib/use-action";
 import {
+  archiveProduct,
+  deleteProduct,
   duplicateProduct,
   setProductStatus,
 } from "@/server/actions/product-actions";
@@ -143,7 +147,6 @@ export function ProductListTable({
 
 function ProductRow({ product }: { product: Item }) {
   const router = useRouter();
-  const [menuOpen, setMenuOpen] = useState(false);
   const prices = product.variants.map((v) => v.price);
   const minPrice = prices.length ? Math.min(...prices) : 0;
   const stock = product.variants.reduce((a, v) => a + Math.max(v.stock, 0), 0);
@@ -156,6 +159,20 @@ function ProductRow({ product }: { product: Item }) {
   const publish = useAction(setProductStatus, {
     successMessage: "Estado actualizado",
     onSuccess: () => router.refresh(),
+  });
+  const archive = useAction(archiveProduct, {
+    successMessage: archived ? "Producto restaurado" : "Producto archivado",
+    onSuccess: () => router.refresh(),
+  });
+  const remove = useAction(deleteProduct, {
+    onSuccess: (result) => {
+      toast.success(
+        result.archived
+          ? "El producto tenía ventas y fue archivado"
+          : "Producto eliminado",
+      );
+      router.refresh();
+    },
   });
 
   return (
@@ -206,70 +223,87 @@ function ProductRow({ product }: { product: Item }) {
       <td className="p-3 tabular-nums">{formatCLP(minPrice)}</td>
       <td className="p-3 tabular-nums">{stock}</td>
       <td className="p-3 text-right">
-        <div className="relative inline-block">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Acciones"
-            onClick={() => setMenuOpen((v) => !v)}
-          >
-            <MoreVertical className="size-4" />
-          </Button>
-          {menuOpen && (
-            <>
-              <button
-                type="button"
-                className="fixed inset-0 z-10 cursor-default"
-                aria-hidden
-                onClick={() => setMenuOpen(false)}
-              />
-              <div className="border-border bg-surface absolute right-0 z-20 mt-1 w-44 rounded-md border p-1 text-left shadow-lg">
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Acciones">
+              <MoreVertical className="size-4" />
+            </Button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="end"
+              sideOffset={4}
+              className="border-border bg-surface z-50 min-w-48 rounded-md border p-1 text-left shadow-lg"
+            >
+              <DropdownMenu.Item asChild>
                 <Link
                   href={`/admin/productos/${product.id}`}
-                  className="hover:bg-surface-muted block rounded px-2 py-1.5 text-sm"
+                  className="hover:bg-surface-muted focus:bg-surface-muted block cursor-pointer rounded px-2 py-2 text-sm outline-none"
                 >
                   Editar
                 </Link>
-                {!archived && product.status !== "PUBLISHED" && (
-                  <button
-                    type="button"
-                    className="hover:bg-surface-muted block w-full rounded px-2 py-1.5 text-left text-sm"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      void publish.run(product.id, "PUBLISHED");
-                    }}
-                  >
-                    Publicar
-                  </button>
-                )}
-                {!archived && product.status === "PUBLISHED" && (
-                  <button
-                    type="button"
-                    className="hover:bg-surface-muted block w-full rounded px-2 py-1.5 text-left text-sm"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      void publish.run(product.id, "HIDDEN");
-                    }}
-                  >
-                    Ocultar
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="hover:bg-surface-muted flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    void dup.run(product.id);
+              </DropdownMenu.Item>
+              {!archived && product.status !== "PUBLISHED" && (
+                <MenuItem onSelect={() => publish.run(product.id, "PUBLISHED")}>
+                  Publicar
+                </MenuItem>
+              )}
+              {!archived && product.status === "PUBLISHED" && (
+                <MenuItem onSelect={() => publish.run(product.id, "HIDDEN")}>
+                  Inactivar / ocultar
+                </MenuItem>
+              )}
+              <MenuItem onSelect={() => dup.run(product.id)}>
+                <Copy className="size-3.5" /> Duplicar
+              </MenuItem>
+              <DropdownMenu.Separator className="bg-border my-1 h-px" />
+              <MenuItem
+                onSelect={() => archive.run(product.id, !archived)}
+              >
+                {archived ? "Restaurar" : "Archivar / remover"}
+              </MenuItem>
+              {!archived && (
+                <MenuItem
+                  destructive
+                  onSelect={() => {
+                    if (
+                      window.confirm(
+                        "¿Eliminar este producto? Si tiene ventas, se archivará para conservar el historial.",
+                      )
+                    ) {
+                      return remove.run(product.id);
+                    }
                   }}
                 >
-                  <Copy className="size-3.5" /> Duplicar
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+                  Eliminar
+                </MenuItem>
+              )}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       </td>
     </tr>
+  );
+}
+
+function MenuItem({
+  children,
+  onSelect,
+  destructive = false,
+}: {
+  children: React.ReactNode;
+  onSelect: () => unknown;
+  destructive?: boolean;
+}) {
+  return (
+    <DropdownMenu.Item
+      onSelect={onSelect}
+      className={`focus:bg-surface-muted flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-sm outline-none ${
+        destructive ? "text-red-600" : ""
+      }`}
+    >
+      {children}
+    </DropdownMenu.Item>
   );
 }
 
