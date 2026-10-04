@@ -101,6 +101,7 @@ export function CheckoutForm({
       shippingDeliveryType: "HOME",
       createAccount: false,
       acceptedTerms: false,
+      acceptedPersonalizedTerms: false,
       ...accountDefaults,
     },
   });
@@ -111,6 +112,8 @@ export function CheckoutForm({
   const rateId = watch("shippingRateId");
   const couponCode = watch("couponCode");
   const emailValue = watch("email");
+  const acceptedPersonalizedTerms = watch("acceptedPersonalizedTerms");
+  const hasPersonalizedLines = quote.lines.some((line) => line.isPersonalized);
   const selectedShipping =
     quote.shippingOptions.find((option) => option.rateId === rateId) ??
     quote.selectedShipping;
@@ -516,6 +519,25 @@ export function CheckoutForm({
           </p>
         )}
 
+        {hasPersonalizedLines && (
+          <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-3">
+            <label className="flex items-start gap-2 text-xs text-amber-950">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-4 rounded"
+                {...register("acceptedPersonalizedTerms")}
+              />
+              <span>
+                Confirmo que revisé nombres, textos, colores, medidas y demás
+                instrucciones. Entiendo que los productos fabricados según mis
+                instrucciones particulares no admiten retracto ni devolución por
+                cambio de opinión. Esto no limita la garantía legal si el
+                producto tiene una falla o no corresponde a lo acordado.
+              </span>
+            </label>
+          </div>
+        )}
+
         <label className="mt-4 flex items-start gap-2 text-xs">
           <input
             type="checkbox"
@@ -548,7 +570,14 @@ export function CheckoutForm({
           </p>
         )}
 
-        <Button type="submit" className="mt-4 w-full" size="lg" disabled={busy}>
+        <Button
+          type="submit"
+          className="mt-4 w-full"
+          size="lg"
+          disabled={
+            busy || (hasPersonalizedLines && !acceptedPersonalizedTerms)
+          }
+        >
           {busy ? (
             <>
               <Loader2 className="size-4 animate-spin" /> Creando pedido…

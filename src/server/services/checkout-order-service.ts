@@ -23,6 +23,7 @@ import { nextOrderNumber } from "@/server/services/order-service";
 import { quoteCart } from "@/server/services/pricing-service";
 
 type CreateOrderResult = { orderNumber: string; orderId: string };
+const PERSONALIZATION_TERMS_VERSION = "2026-10-04-v1";
 
 /**
  * Crea un pedido a partir del carrito.
@@ -86,6 +87,14 @@ export async function createOrder(
     if (quote.hasUnavailableLines) {
       throw new ActionError(
         "Algunos productos del carrito ya no tienen stock. Ajusta el carrito.",
+      );
+    }
+    const hasPersonalizedLines = quote.lines.some(
+      (line) => line.available && line.isPersonalized,
+    );
+    if (hasPersonalizedLines && !data.acceptedPersonalizedTerms) {
+      throw new ActionError(
+        "Debes aceptar las condiciones de productos personalizados antes de continuar.",
       );
     }
     if (data.fulfillmentMethod === "SHIPPING" && !quote.selectedShipping) {
@@ -196,6 +205,12 @@ export async function createOrder(
           couponId: coupon?.id ?? null,
           couponCode: quote.appliedCoupon?.code ?? null,
           customerNote: data.customerNote ?? null,
+          personalizationTermsAcceptedAt: hasPersonalizedLines
+            ? new Date()
+            : null,
+          personalizationTermsVersion: hasPersonalizedLines
+            ? PERSONALIZATION_TERMS_VERSION
+            : null,
           expiresAt: new Date(Date.now() + 15 * 60 * 1000),
           items: {
             create: payableLines.map((line) => ({
@@ -209,6 +224,7 @@ export async function createOrder(
               quantity: line.quantity,
               lineDiscount: 0,
               lineTotal: line.lineTotal,
+              isPersonalized: line.isPersonalized,
               customizations: {
                 create: line.customizations.map((c) => ({
                   key: c.key,

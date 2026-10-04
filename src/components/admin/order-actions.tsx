@@ -44,6 +44,7 @@ type Order = {
   grandTotal: number;
   shippingTotal: number;
   refundedTotal: number;
+  hasPersonalizedItems: boolean;
   documents: {
     id: string;
     type: string;
@@ -63,6 +64,8 @@ export function OrderActions({ order }: { order: Order }) {
     amount: "",
     reference: "",
     reason: "",
+    refundReason: "CHANGE_OF_MIND" as
+      "CHANGE_OF_MIND" | "DEFECT_OR_NONCONFORMITY" | "AGREED_EXCEPTION",
     restock: false,
   });
   const pendingBoleta = order.documents.find(
@@ -133,8 +136,7 @@ export function OrderActions({ order }: { order: Order }) {
   const canCancel =
     order.status !== "CANCELLED" && order.status !== "DELIVERED";
   const refundableTotal = Math.max(0, order.grandTotal - order.refundedTotal);
-  const canRefund =
-    order.paymentStatus === "PAID" && refundableTotal > 0;
+  const canRefund = order.paymentStatus === "PAID" && refundableTotal > 0;
   const refundAmount = Number(refund.amount);
   const mayRestockAll =
     order.refundedTotal === 0 && refundAmount === order.grandTotal;
@@ -434,6 +436,25 @@ export function OrderActions({ order }: { order: Order }) {
               {formatMoney(refundableTotal)}.
             </p>
             <div className="mt-2 flex flex-wrap items-end gap-2">
+              <Select
+                className="w-64"
+                value={refund.refundReason}
+                onChange={(event) =>
+                  setRefund({
+                    ...refund,
+                    refundReason: event.target
+                      .value as typeof refund.refundReason,
+                  })
+                }
+              >
+                <option value="CHANGE_OF_MIND">Cambio de opinión</option>
+                <option value="DEFECT_OR_NONCONFORMITY">
+                  Falla o no corresponde a lo acordado
+                </option>
+                <option value="AGREED_EXCEPTION">
+                  Excepción comercial autorizada
+                </option>
+              </Select>
               <Input
                 className="w-32"
                 inputMode="numeric"
@@ -482,6 +503,7 @@ export function OrderActions({ order }: { order: Order }) {
                     reference: refund.reference,
                     restock: refund.restock,
                     reason: refund.reason,
+                    refundReason: refund.refundReason,
                   })
                 }
                 trigger={
@@ -494,6 +516,8 @@ export function OrderActions({ order }: { order: Order }) {
                       refundAmount > refundableTotal ||
                       refund.reference.trim().length < 3 ||
                       refund.reason.trim().length < 3 ||
+                      (order.hasPersonalizedItems &&
+                        refund.refundReason === "CHANGE_OF_MIND") ||
                       doRefund.isPending
                     }
                   >
@@ -502,6 +526,13 @@ export function OrderActions({ order }: { order: Order }) {
                 }
               />
             </div>
+            {order.hasPersonalizedItems &&
+              refund.refundReason === "CHANGE_OF_MIND" && (
+                <p className="mt-2 text-xs font-medium text-amber-700">
+                  Bloqueado: el pedido contiene productos personalizados. El
+                  retracto por cambio de opinión no corresponde.
+                </p>
+              )}
           </div>
         )}
 

@@ -66,6 +66,11 @@ export default async function AdminOrderDetailPage({
                         · {item.variantLabel}
                       </span>
                     )}
+                    {item.isPersonalized && (
+                      <Badge variant="warning" className="ml-2">
+                        Personalizado · sin retracto
+                      </Badge>
+                    )}
                   </span>
                   <span className="tabular-nums">
                     {item.quantity} × {formatCLP(item.unitPrice)}
@@ -89,6 +94,15 @@ export default async function AdminOrderDetailPage({
               </li>
             ))}
           </ul>
+
+          {order.personalizationTermsAcceptedAt && (
+            <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
+              El cliente aceptó las condiciones para productos personalizados el{" "}
+              {formatDateTime(order.personalizationTermsAcceptedAt)} · versión{" "}
+              {order.personalizationTermsVersion}. Las instrucciones exactas
+              permanecen guardadas en cada producto del pedido.
+            </div>
+          )}
 
           <dl className="border-border mt-4 space-y-1 border-t pt-3 text-sm">
             <Line label="Subtotal" value={formatCLP(order.subtotal)} />
@@ -194,6 +208,7 @@ export default async function AdminOrderDetailPage({
                 : total,
             0,
           ),
+          hasPersonalizedItems: order.items.some((item) => item.isPersonalized),
           documents: order.documents.map((document) => ({
             id: document.id,
             type: document.type,

@@ -41,6 +41,7 @@ const baseObject = z.object({
   acceptedTerms: z.boolean().refine((value) => value, {
     message: "Debes aceptar los términos y la política de privacidad",
   }),
+  acceptedPersonalizedTerms: z.boolean().default(false),
 });
 
 const crossValidate = (

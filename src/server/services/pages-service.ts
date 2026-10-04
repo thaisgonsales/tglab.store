@@ -123,7 +123,7 @@ const DEFAULTS: Record<string, { title: string; body: string[] }> = {
       "En una devolución por cambio de opinión, **el costo del envío del producto de vuelta a TG LAB es de cargo del cliente**. Escríbenos antes de enviarlo para recibir los datos y las instrucciones de devolución.",
       "Una vez que recibamos el producto, comprobaremos que esté completo y revisaremos su estado. Si corresponde, gestionaremos el reembolso. Si el producto se deterioró por una causa atribuible al cliente, el derecho a retracto podría no proceder.",
       "## Productos personalizados",
-      "Los productos que elaboramos o modificamos según **instrucciones particulares del cliente** —por ejemplo, con un nombre, texto, imagen, diseño o medida solicitada especialmente— **no admiten devolución por cambio de opinión**. Esta condición se informará en la ficha del producto antes de realizar la compra.",
+      "Los productos que elaboramos o modificamos según **instrucciones particulares del cliente** —por ejemplo, con un nombre, texto, imagen, diseño o medida solicitada especialmente— **no están sujetos a retracto ni admiten cancelación o devolución por cambio de opinión**. Antes del pago, el cliente debe revisar sus instrucciones y aceptar expresamente esta condición; la tienda conservará esa aceptación junto al pedido.",
       "Un producto del catálogo no se considera personalizado solo porque se fabrique después de recibir el pedido o porque el cliente elija entre las opciones estándar de color o modelo que ofrecemos.",
       "Si un producto personalizado llega con una falla o no corresponde a las especificaciones acordadas, puedes contactarnos. Tus derechos de garantía siguen vigentes.",
       "## Productos con fallas o errores en el pedido",

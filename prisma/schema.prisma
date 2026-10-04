@@ -610,6 +610,9 @@ model Order {
   customerNote  String?
   internalNotes String?
 
+  personalizationTermsAcceptedAt DateTime?
+  personalizationTermsVersion    String?
+
   placedAt  DateTime  @default(now())
   paidAt    DateTime?
   createdAt DateTime  @default(now())
@@ -682,6 +685,7 @@ model OrderItem {
   quantity     Int
   lineDiscount Int     @default(0)
   lineTotal    Int
+  isPersonalized Boolean @default(false)
 
   customizations OrderItemCustomization[]
   review ProductReview?

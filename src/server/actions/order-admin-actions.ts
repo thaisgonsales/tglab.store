@@ -164,6 +164,11 @@ const refundSchema = z.object({
     .trim()
     .min(3, "Indica el motivo de la devolución")
     .max(500),
+  refundReason: z.enum([
+    "CHANGE_OF_MIND",
+    "DEFECT_OR_NONCONFORMITY",
+    "AGREED_EXCEPTION",
+  ]),
 });
 
 /**
@@ -181,6 +186,14 @@ export async function markOrderRefunded(input: z.input<typeof refundSchema>) {
     if (!order) throw new ActionError("Pedido no encontrado.");
     if (order.paymentStatus !== "PAID") {
       throw new ActionError("Solo se puede reembolsar un pedido pagado.");
+    }
+    if (
+      data.refundReason === "CHANGE_OF_MIND" &&
+      order.items.some((item) => item.isPersonalized)
+    ) {
+      throw new ActionError(
+        "Este pedido contiene productos personalizados y no admite devolución por cambio de opinión. Solo corresponde gestionar una falla, una diferencia con lo acordado o una excepción autorizada.",
+      );
     }
     const alreadyRefunded = order.payments.reduce(
       (total, payment) =>
@@ -238,6 +251,7 @@ export async function markOrderRefunded(input: z.input<typeof refundSchema>) {
           idempotencyKey: nanoid(24),
           rawPayload: {
             reason: data.reason,
+            refundReason: data.refundReason,
             recordedManually: true,
           },
         },
@@ -300,7 +314,7 @@ export async function markOrderRefunded(input: z.input<typeof refundSchema>) {
         data: {
           orderId: order.id,
           toStatus: order.status,
-          note: `${fullRefund ? "Reembolso total" : "Reembolso parcial"} registrado por ${data.amount} (ref: ${data.reference})${data.restock ? " · stock repuesto" : ""}. Motivo: ${data.reason}.${issuedBoleta ? " Nota de crédito pendiente en SII." : " Verificar reversa del voucher en el RCV."}`,
+          note: `${fullRefund ? "Reembolso total" : "Reembolso parcial"} registrado por ${data.amount} (ref: ${data.reference})${data.restock ? " · stock repuesto" : ""}. Causal: ${data.refundReason}. Motivo: ${data.reason}.${issuedBoleta ? " Nota de crédito pendiente en SII." : " Verificar reversa del voucher en el RCV."}`,
           adminUserId: session.user.id,
         },
       });

@@ -30,6 +30,7 @@ export type QuoteLine = {
   lineTotal: number;
   available: boolean;
   maxStock: number;
+  isPersonalized: boolean;
   customizations: { key: string; label: string; value: string }[];
 };
 
@@ -77,6 +78,7 @@ const cartInclude = {
               name: true,
               status: true,
               archivedAt: true,
+              isCustomizable: true,
               weightGrams: true,
               packageWeightGrams: true,
               media: {
@@ -154,6 +156,7 @@ export async function quoteCart(input: QuoteInput): Promise<Quote> {
       lineTotal: v.price * item.quantity,
       available,
       maxStock: freeStock,
+      isPersonalized: v.product.isCustomizable && custom.length > 0,
       customizations: custom,
     };
   });
