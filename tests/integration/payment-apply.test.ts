@@ -109,6 +109,10 @@ describe("applyProviderPayment", () => {
     expect(variant.stock).toBe(8);
     expect(variant.reservedStock).toBe(0);
 
+    // El voucher del proveedor electrónico reemplaza la boleta según el
+    // modelo declarado en SII; no debe quedar una boleta manual pendiente.
+    expect(await db.documentRecord.count({ where: { orderId } })).toBe(0);
+
     // Reintento del webhook: no descuenta de nuevo.
     await applyProviderPayment(res);
     const variant2 = await db.productVariant.findUniqueOrThrow({

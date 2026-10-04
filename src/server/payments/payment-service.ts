@@ -111,9 +111,10 @@ export async function applyProviderPayment(
           note: `Pago aprobado (${result.provider} ${result.providerReference}).`,
         },
       });
-      await tx.documentRecord.create({
-        data: { orderId: order.id, type: "BOLETA", status: "PENDING" },
-      });
+      // El modelo de emisión declarado por TG LAB usa el comprobante del
+      // pago electrónico como boleta. No se crea una boleta SII adicional,
+      // porque duplicaría tributariamente la venta. Las transferencias sí
+      // crean un DocumentRecord pendiente en confirmBankTransfer().
       return { ...base, orderPaymentStatus: "PAID", transitionedToPaid: true };
     }
 

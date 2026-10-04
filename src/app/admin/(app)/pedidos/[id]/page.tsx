@@ -264,6 +264,25 @@ export default async function AdminOrderDetailPage({
               </p>
             </div>
           )}
+
+          {order.paymentStatus === "PAID" &&
+            order.documents.length === 0 &&
+            order.payments.some(
+              (payment) =>
+                payment.status === "PAID" &&
+                payment.provider !== "BANK_TRANSFER",
+            ) && (
+              <div className="border-border mt-4 border-t pt-3 text-sm">
+                <p className="text-foreground-muted mb-1 text-xs font-medium uppercase">
+                  Documento tributario
+                </p>
+                <p>Comprobante de pago electrónico</p>
+                <p className="text-foreground-muted mt-1 text-xs">
+                  El voucher reemplaza la boleta según el modelo declarado en el
+                  SII. No emitir una segunda boleta.
+                </p>
+              </div>
+            )}
         </CardContent>
       </Card>
     </div>
