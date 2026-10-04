@@ -216,6 +216,15 @@ export default async function AdminOrderDetailPage({
             folio: document.folio ?? "",
             amount: document.amount,
           })),
+          resolutionRequests: order.resolutionRequests.map((request) => ({
+            id: request.id,
+            type: request.type,
+            status: request.status,
+            channel: request.channel,
+            reason: request.reason,
+            decisionNote: request.decisionNote ?? "",
+            consumedAt: request.consumedAt?.toISOString() ?? "",
+          })),
         }}
       />
 

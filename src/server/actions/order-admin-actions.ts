@@ -89,6 +89,7 @@ export async function changeOrderStatus(
 
 const cancelSchema = z.object({
   orderId: z.string().cuid(),
+  requestId: z.string().cuid(),
   reason: z.string().trim().min(3, "Indica un motivo").max(500),
   ownerConfirmation: z.string().trim().min(1),
 });
@@ -101,9 +102,23 @@ const cancelSchema = z.object({
  */
 export async function cancelOrder(input: z.infer<typeof cancelSchema>) {
   return ownerAction(async (session) => {
-    const { orderId, reason, ownerConfirmation } = cancelSchema.parse(input);
+    const { orderId, requestId, reason, ownerConfirmation } =
+      cancelSchema.parse(input);
     const order = await db.order.findUnique({ where: { id: orderId } });
     if (!order) throw new ActionError("Pedido no encontrado.");
+    const approvedRequest = await db.orderResolutionRequest.findFirst({
+      where: {
+        id: requestId,
+        orderId,
+        type: "CANCELLATION",
+        status: "APPROVED",
+        consumedAt: null,
+      },
+    });
+    if (!approvedRequest)
+      throw new ActionError(
+        "Primero debes aprobar una solicitud de cancelación pendiente.",
+      );
     if (ownerConfirmation.toUpperCase() !== order.number.toUpperCase()) {
       throw new ActionError(
         `Escribe ${order.number} para confirmar personalmente la cancelación.`,
@@ -148,6 +163,10 @@ export async function cancelOrder(input: z.infer<typeof cancelSchema>) {
           adminUserId: session.user.id,
         },
       });
+      await tx.orderResolutionRequest.update({
+        where: { id: requestId },
+        data: { consumedAt: new Date() },
+      });
     });
 
     await sendOrderStatusEmail(orderId, "CANCELLED", {
@@ -162,6 +181,7 @@ export async function cancelOrder(input: z.infer<typeof cancelSchema>) {
 
 const refundSchema = z.object({
   orderId: z.string().cuid(),
+  requestId: z.string().cuid(),
   amount: z.coerce.number().int().min(1),
   reference: z
     .string()
@@ -197,6 +217,19 @@ export async function markOrderRefunded(input: z.input<typeof refundSchema>) {
       include: { items: true, payments: true, documents: true },
     });
     if (!order) throw new ActionError("Pedido no encontrado.");
+    const approvedRequest = await db.orderResolutionRequest.findFirst({
+      where: {
+        id: data.requestId,
+        orderId: data.orderId,
+        type: { in: ["REFUND", "RETURN"] },
+        status: "APPROVED",
+        consumedAt: null,
+      },
+    });
+    if (!approvedRequest)
+      throw new ActionError(
+        "Primero debes aprobar una solicitud de devolución o reembolso.",
+      );
     if (data.ownerConfirmation.toUpperCase() !== order.number.toUpperCase()) {
       throw new ActionError(
         `Escribe ${order.number} para confirmar personalmente el registro.`,
@@ -336,9 +369,95 @@ export async function markOrderRefunded(input: z.input<typeof refundSchema>) {
           adminUserId: session.user.id,
         },
       });
+      await tx.orderResolutionRequest.update({
+        where: { id: data.requestId },
+        data: { consumedAt: new Date() },
+      });
     });
 
     revalidatePath("/admin/pedidos");
+    revalidatePath(`/admin/pedidos/${data.orderId}`);
+    return null;
+  });
+}
+
+const resolutionRequestSchema = z.object({
+  orderId: z.string().cuid(),
+  type: z.enum(["CANCELLATION", "RETURN", "REFUND"]),
+  channel: z.enum(["WHATSAPP", "EMAIL", "PHONE", "OTHER"]),
+  reason: z.string().trim().min(3).max(1000),
+});
+
+export async function recordResolutionRequest(
+  input: z.input<typeof resolutionRequestSchema>,
+) {
+  return staffAction(async (session) => {
+    const data = resolutionRequestSchema.parse(input);
+    const order = await db.order.findUnique({
+      where: { id: data.orderId },
+      select: { status: true },
+    });
+    if (!order) throw new ActionError("Pedido no encontrado.");
+    await db.$transaction(async (tx) => {
+      await tx.orderResolutionRequest.create({
+        data: {
+          ...data,
+          createdById: session.user.id,
+          createdByName: session.user.name,
+        },
+      });
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: data.orderId,
+          toStatus: order.status,
+          note: `Solicitud ${data.type} recibida por ${data.channel}; pendiente de decisión.`,
+          adminUserId: session.user.id,
+        },
+      });
+    });
+    revalidatePath(`/admin/pedidos/${data.orderId}`);
+    return null;
+  });
+}
+
+const decideResolutionSchema = z.object({
+  orderId: z.string().cuid(),
+  requestId: z.string().cuid(),
+  decision: z.enum(["APPROVED", "REJECTED"]),
+  note: z.string().trim().min(3).max(1000),
+});
+
+export async function decideResolutionRequest(
+  input: z.input<typeof decideResolutionSchema>,
+) {
+  return ownerAction(async (session) => {
+    const data = decideResolutionSchema.parse(input);
+    const request = await db.orderResolutionRequest.findFirst({
+      where: { id: data.requestId, orderId: data.orderId, status: "PENDING" },
+      include: { order: { select: { status: true } } },
+    });
+    if (!request)
+      throw new ActionError("La solicitud ya fue resuelta o no existe.");
+    await db.$transaction(async (tx) => {
+      await tx.orderResolutionRequest.update({
+        where: { id: request.id },
+        data: {
+          status: data.decision,
+          decisionNote: data.note,
+          decidedAt: new Date(),
+          decidedById: session.user.id,
+          decidedByName: session.user.name,
+        },
+      });
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: data.orderId,
+          toStatus: request.order.status,
+          note: `Solicitud ${request.type} ${data.decision === "APPROVED" ? "aprobada" : "rechazada"}. ${data.note}`,
+          adminUserId: session.user.id,
+        },
+      });
+    });
     revalidatePath(`/admin/pedidos/${data.orderId}`);
     return null;
   });

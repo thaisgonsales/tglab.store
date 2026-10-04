@@ -16,6 +16,8 @@ import {
   cancelOrder,
   changeOrderStatus,
   markOrderRefunded,
+  recordResolutionRequest,
+  decideResolutionRequest,
   recordManualBoleta,
   recordManualCreditNote,
   updateOrderTracking,
@@ -52,6 +54,15 @@ type Order = {
     folio: string;
     amount: number | null;
   }[];
+  resolutionRequests: {
+    id: string;
+    type: string;
+    status: string;
+    channel: string;
+    reason: string;
+    decisionNote: string;
+    consumedAt: string;
+  }[];
 };
 
 export function OrderActions({ order }: { order: Order }) {
@@ -61,6 +72,14 @@ export function OrderActions({ order }: { order: Order }) {
   const [ref, setRef] = useState("");
   const [cancelReason, setCancelReason] = useState("");
   const [cancelConfirmation, setCancelConfirmation] = useState("");
+  const [newRequest, setNewRequest] = useState({
+    type: "CANCELLATION" as "CANCELLATION" | "RETURN" | "REFUND",
+    channel: "WHATSAPP" as "WHATSAPP" | "EMAIL" | "PHONE" | "OTHER",
+    reason: "",
+  });
+  const [decisionNotes, setDecisionNotes] = useState<Record<string, string>>(
+    {},
+  );
   const [refund, setRefund] = useState({
     amount: "",
     reference: "",
@@ -135,6 +154,14 @@ export function OrderActions({ order }: { order: Order }) {
     successMessage: "Nota de crédito registrada",
     onSuccess: () => router.refresh(),
   });
+  const createRequest = useAction(recordResolutionRequest, {
+    successMessage: "Solicitud registrada",
+    onSuccess: () => router.refresh(),
+  });
+  const decideRequest = useAction(decideResolutionRequest, {
+    successMessage: "Solicitud resuelta",
+    onSuccess: () => router.refresh(),
+  });
 
   const options = NEXT_STATUS[order.status] ?? [];
   const canCancel =
@@ -144,6 +171,18 @@ export function OrderActions({ order }: { order: Order }) {
   const refundAmount = Number(refund.amount);
   const mayRestockAll =
     order.refundedTotal === 0 && refundAmount === order.grandTotal;
+  const approvedCancellation = order.resolutionRequests.find(
+    (request) =>
+      request.type === "CANCELLATION" &&
+      request.status === "APPROVED" &&
+      !request.consumedAt,
+  );
+  const approvedRefund = order.resolutionRequests.find(
+    (request) =>
+      ["RETURN", "REFUND"].includes(request.type) &&
+      request.status === "APPROVED" &&
+      !request.consumedAt,
+  );
 
   return (
     <Card>
@@ -151,6 +190,124 @@ export function OrderActions({ order }: { order: Order }) {
         <CardTitle>Gestión</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
+        <div className="border-border rounded-md border p-3">
+          <p className="text-sm font-medium">
+            Solicitudes recibidas por atención
+          </p>
+          <p className="text-foreground-muted text-xs">
+            Registra aquí lo que el cliente pidió por WhatsApp, email o
+            teléfono. Solo la propietaria puede aprobar o rechazar.
+          </p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-3">
+            <Select
+              value={newRequest.type}
+              onChange={(e) =>
+                setNewRequest({
+                  ...newRequest,
+                  type: e.target.value as typeof newRequest.type,
+                })
+              }
+            >
+              <option value="CANCELLATION">Cancelación</option>
+              <option value="RETURN">Devolución</option>
+              <option value="REFUND">Reembolso</option>
+            </Select>
+            <Select
+              value={newRequest.channel}
+              onChange={(e) =>
+                setNewRequest({
+                  ...newRequest,
+                  channel: e.target.value as typeof newRequest.channel,
+                })
+              }
+            >
+              <option value="WHATSAPP">WhatsApp</option>
+              <option value="EMAIL">Email</option>
+              <option value="PHONE">Teléfono</option>
+              <option value="OTHER">Otro</option>
+            </Select>
+            <Input
+              placeholder="Motivo informado por el cliente"
+              value={newRequest.reason}
+              onChange={(e) =>
+                setNewRequest({ ...newRequest, reason: e.target.value })
+              }
+            />
+          </div>
+          <Button
+            className="mt-2"
+            size="sm"
+            disabled={
+              newRequest.reason.trim().length < 3 || createRequest.isPending
+            }
+            onClick={() =>
+              createRequest.run({ orderId: order.id, ...newRequest })
+            }
+          >
+            Registrar solicitud pendiente
+          </Button>
+          <div className="mt-3 space-y-2">
+            {order.resolutionRequests.map((request) => (
+              <div
+                key={request.id}
+                className="bg-surface-muted rounded p-2 text-xs"
+              >
+                <p className="font-medium">
+                  {request.type} · {request.status} · {request.channel}
+                </p>
+                <p>{request.reason}</p>
+                {request.status === "PENDING" && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Input
+                      className="max-w-xs"
+                      placeholder="Fundamento de la decisión"
+                      value={decisionNotes[request.id] ?? ""}
+                      onChange={(e) =>
+                        setDecisionNotes({
+                          ...decisionNotes,
+                          [request.id]: e.target.value,
+                        })
+                      }
+                    />
+                    <Button
+                      size="sm"
+                      disabled={
+                        (decisionNotes[request.id] ?? "").trim().length < 3
+                      }
+                      onClick={() =>
+                        decideRequest.run({
+                          orderId: order.id,
+                          requestId: request.id,
+                          decision: "APPROVED",
+                          note: decisionNotes[request.id] ?? "",
+                        })
+                      }
+                    >
+                      Aprobar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      disabled={
+                        (decisionNotes[request.id] ?? "").trim().length < 3
+                      }
+                      onClick={() =>
+                        decideRequest.run({
+                          orderId: order.id,
+                          requestId: request.id,
+                          decision: "REJECTED",
+                          note: decisionNotes[request.id] ?? "",
+                        })
+                      }
+                    >
+                      Rechazar
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
         {order.paymentStatus === "PENDING" && (
           <div className="border-border rounded-md border p-3">
             <p className="text-sm font-medium">
@@ -540,6 +697,7 @@ export function OrderActions({ order }: { order: Order }) {
                 onConfirm={() =>
                   doRefund.run({
                     orderId: order.id,
+                    requestId: approvedRefund!.id,
                     amount: refund.amount,
                     reference: refund.reference,
                     restock: refund.restock,
@@ -564,6 +722,7 @@ export function OrderActions({ order }: { order: Order }) {
                         order.number.toUpperCase() ||
                       !refund.deliveryReviewed ||
                       !refund.moneyReturned ||
+                      !approvedRefund ||
                       (order.hasPersonalizedItems &&
                         refund.refundReason === "CHANGE_OF_MIND") ||
                       doRefund.isPending
@@ -615,6 +774,7 @@ export function OrderActions({ order }: { order: Order }) {
                 onConfirm={() =>
                   cancel.run({
                     orderId: order.id,
+                    requestId: approvedCancellation!.id,
                     reason: cancelReason.trim(),
                     ownerConfirmation: cancelConfirmation,
                   })
@@ -627,7 +787,8 @@ export function OrderActions({ order }: { order: Order }) {
                       cancelReason.trim().length < 3 ||
                       cancel.isPending ||
                       cancelConfirmation.trim().toUpperCase() !==
-                        order.number.toUpperCase()
+                        order.number.toUpperCase() ||
+                      !approvedCancellation
                     }
                   >
                     Cancelar pedido

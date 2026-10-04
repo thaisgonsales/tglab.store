@@ -625,6 +625,7 @@ model Order {
   stockReservations  StockReservation[]
   couponUses         CouponUse[]
   documents          DocumentRecord[]
+  resolutionRequests OrderResolutionRequest[]
 
   @@index([email])
   @@index([status])
@@ -693,6 +694,40 @@ model OrderItem {
   @@index([orderId])
   @@index([productId])
   @@map("order_item")
+}
+
+enum ResolutionRequestType {
+  CANCELLATION
+  RETURN
+  REFUND
+}
+
+enum ResolutionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model OrderResolutionRequest {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  type       ResolutionRequestType
+  status     ResolutionRequestStatus @default(PENDING)
+  channel    String
+  reason     String
+  requestedAt DateTime @default(now())
+  createdById String
+  createdByName String
+  decidedAt DateTime?
+  decidedById String?
+  decidedByName String?
+  decisionNote String?
+  consumedAt DateTime?
+
+  @@index([orderId, status])
+  @@map("order_resolution_request")
 }
 
 model ProductFavorite {

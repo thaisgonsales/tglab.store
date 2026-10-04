@@ -69,6 +69,7 @@ export async function getAdminOrder(id: string) {
         include: { adminUser: { select: { name: true } } },
       },
       documents: true,
+      resolutionRequests: { orderBy: { requestedAt: "desc" } },
       stockReservations: true,
       customer: true,
     },
