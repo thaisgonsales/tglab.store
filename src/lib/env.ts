@@ -64,6 +64,21 @@ const serverEnvSchema = z.object({
 
   // SII
   SII_DOCUMENTS_DRIVER: z.string().optional().default("none"),
+
+  // Chilexpress (las claves del portal Developers son de prueba).
+  CHILEXPRESS_API_ENV: z.enum(["test", "production"]).default("test"),
+  CHILEXPRESS_COVERAGE_API_KEY: z.string().optional().default(""),
+  CHILEXPRESS_RATING_API_KEY: z.string().optional().default(""),
+  CHILEXPRESS_SHIPPING_API_KEY: z.string().optional().default(""),
+  CHILEXPRESS_ORIGIN_COMUNA: z.string().default("Chonchi"),
+  CHILEXPRESS_PACKAGE_HEIGHT_CM: z.coerce.number().positive().default(8),
+  CHILEXPRESS_PACKAGE_WIDTH_CM: z.coerce.number().positive().default(16),
+  CHILEXPRESS_PACKAGE_LENGTH_CM: z.coerce.number().positive().default(21),
+  CHILEXPRESS_PACKAGING_WEIGHT_GRAMS: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .default(150),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

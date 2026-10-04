@@ -28,7 +28,7 @@ const baseObject = z.object({
   apartment: z.string().trim().max(40).optional(),
   postalCode: z.string().trim().max(12).optional(),
   addressNotes: z.string().trim().max(400).optional(),
-  shippingRateId: z.string().cuid().optional().or(z.literal("")),
+  shippingRateId: z.string().trim().max(160).optional().or(z.literal("")),
   shippingDeliveryType: z
     .enum(["HOME", "PICKUP_POINT", "LOCAL_DELIVERY"])
     .default("HOME"),
@@ -93,7 +93,7 @@ const crossValidate = (
       ctx.addIssue({
         code: "custom",
         path: ["pickupPointName"],
-        message: "Indica el Punto Blue elegido",
+        message: "Indica la oficina Chilexpress elegida",
       });
     }
     if (
@@ -103,7 +103,7 @@ const crossValidate = (
       ctx.addIssue({
         code: "custom",
         path: ["pickupPointAddress"],
-        message: "Ingresa la dirección del Punto Blue",
+        message: "Ingresa la dirección de la oficina Chilexpress",
       });
     }
   }

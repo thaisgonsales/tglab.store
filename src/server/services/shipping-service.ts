@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import { db } from "@/server/db";
+import { ChilexpressProvider } from "@/server/providers/shipping/chilexpress";
 
 /**
  * Cálculo de despacho. Las zonas, comunas cubiertas y tarifas se configuran
@@ -78,6 +79,29 @@ export async function getShippingOptions(
         free: free || rate.price === 0,
       });
     }
+  }
+
+  // La cotización externa siempre ocurre en el servidor. Ante una caída del
+  // proveedor se conservan las opciones locales y nunca se inventa un precio.
+  try {
+    const quotes = await new ChilexpressProvider().quote({
+      destinationComuna: ctx.comuna,
+      weightGrams: ctx.weightGrams,
+      declaredWorth: ctx.subtotal,
+    });
+    for (const quote of quotes) {
+      options.push({
+        rateId: `chilexpress:${quote.serviceCode}:${ctx.comuna}`,
+        zoneId: "chilexpress",
+        zoneName: "Chilexpress",
+        name: quote.description,
+        deliveryType: "HOME",
+        price: quote.price,
+        free: quote.price === 0,
+      });
+    }
+  } catch (error) {
+    console.error("[chilexpress:quote]", error);
   }
 
   // Ordena por precio ascendente y deduplica por (nombre, precio).

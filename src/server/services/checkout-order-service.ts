@@ -103,7 +103,9 @@ export async function createOrder(
       quote.selectedShipping?.deliveryType === "PICKUP_POINT" &&
       (!data.pickupPointName || !data.pickupPointAddress)
     ) {
-      throw new ActionError("Indica el Punto Blue donde retirarás el pedido.");
+      throw new ActionError(
+        "Indica la oficina Chilexpress donde retirarás el pedido.",
+      );
     }
 
     const rut = normalizeRut(data.rut);
@@ -182,7 +184,9 @@ export async function createOrder(
             quote.selectedShipping?.deliveryType === "LOCAL_DELIVERY"
               ? "TG LAB"
               : quote.selectedShipping
-                ? "Blue Express"
+                ? quote.selectedShipping.rateId.startsWith("chilexpress:")
+                  ? "Chilexpress"
+                  : "Despacho nacional"
                 : null,
           currency: "CLP",
           subtotal: quote.subtotal,

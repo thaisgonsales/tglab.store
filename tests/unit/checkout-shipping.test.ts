@@ -41,18 +41,18 @@ describe("modalidades de envío del checkout", () => {
     }
   });
 
-  it("acepta retiro en Punto Blue sin calle cuando identifica el punto", () => {
+  it("acepta retiro en sucursal sin calle cuando identifica la oficina", () => {
     const result = checkoutFormSchema.safeParse({
       ...base,
       shippingDeliveryType: "PICKUP_POINT",
-      pickupPointName: "Punto Blue Castro Centro",
+      pickupPointName: "Chilexpress Castro Centro",
       pickupPointAddress: "San Martín 456, Castro",
     });
 
     expect(result.success).toBe(true);
   });
 
-  it("exige nombre y dirección del Punto Blue", () => {
+  it("exige nombre y dirección de la oficina", () => {
     const result = checkoutFormSchema.safeParse({
       ...base,
       shippingDeliveryType: "PICKUP_POINT",
@@ -65,5 +65,17 @@ describe("modalidades de envío del checkout", () => {
         result.error.flatten().fieldErrors.pickupPointAddress,
       ).toBeDefined();
     }
+  });
+
+  it("acepta un identificador opaco de tarifa externa", () => {
+    const result = checkoutFormSchema.safeParse({
+      ...base,
+      shippingRateId: "chilexpress:3:Castro",
+      shippingDeliveryType: "HOME",
+      street: "O'Higgins",
+      number: "123",
+    });
+
+    expect(result.success).toBe(true);
   });
 });

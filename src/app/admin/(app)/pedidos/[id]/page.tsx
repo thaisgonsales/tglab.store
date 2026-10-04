@@ -136,7 +136,7 @@ export default async function AdminOrderDetailPage({
               <p>Retiro en tienda</p>
             ) : order.shippingDeliveryType === "PICKUP_POINT" ? (
               <>
-                <p className="font-medium">Retiro en Punto Blue Express</p>
+                <p className="font-medium">Retiro en oficina Chilexpress</p>
                 <p>{order.pickupPointName}</p>
                 <p className="text-foreground-muted">
                   {order.pickupPointAddress}
@@ -150,7 +150,7 @@ export default async function AdminOrderDetailPage({
                 <p className="font-medium">
                   {order.shippingDeliveryType === "LOCAL_DELIVERY"
                     ? "Entrega personal TG LAB"
-                    : "Blue Express a domicilio"}
+                    : order.carrier || "Despacho a domicilio"}
                 </p>
                 <p>
                   {address.street} {address.number}

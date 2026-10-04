@@ -278,7 +278,7 @@ function RatesEditor({ zoneId, rates }: { zoneId: string; rates: Rate[] }) {
                 {r.name} — <strong>{formatCLP(r.price)}</strong>
                 <Badge variant="outline" className="ml-2">
                   {r.deliveryType === "PICKUP_POINT"
-                    ? "Punto Blue"
+                    ? "Sucursal del transportista"
                     : r.deliveryType === "LOCAL_DELIVERY"
                       ? "Entrega local"
                       : "Domicilio"}
@@ -325,7 +325,7 @@ function RatesEditor({ zoneId, rates }: { zoneId: string; rates: Rate[] }) {
             }
           >
             <option value="HOME">Domicilio</option>
-            <option value="PICKUP_POINT">Punto Blue</option>
+            <option value="PICKUP_POINT">Sucursal del transportista</option>
             <option value="LOCAL_DELIVERY">Entrega local</option>
           </Select>
         </div>

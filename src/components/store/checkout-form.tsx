@@ -261,7 +261,7 @@ export function CheckoutForm({
                 active={method === "SHIPPING"}
                 onClick={() => setValue("fulfillmentMethod", "SHIPPING")}
                 title="Envío"
-                subtitle="Domicilio o Punto Blue"
+                subtitle="Domicilio o sucursal"
               />
             )}
           </div>
@@ -389,29 +389,29 @@ export function CheckoutForm({
                 {shippingDeliveryType === "PICKUP_POINT" && (
                   <div className="border-brand/20 mt-4 rounded-md border p-4">
                     <p className="text-sm font-medium">
-                      Elige tu Punto Blue Express
+                      Elige tu oficina Chilexpress
                     </p>
                     <p className="text-foreground-muted mt-1 text-xs">
-                      Busca el punto más cercano, copia su nombre y dirección y
-                      vuelve a completar estos campos.
+                      Busca la oficina más cercana, copia su nombre y dirección
+                      y vuelve a completar estos campos.
                     </p>
                     <a
-                      href="https://mapa-pickup.blue.cl/?client-services=34"
+                      href="https://www.chilexpress.cl/centro-de-ayuda/sucursales"
                       target="_blank"
                       rel="noreferrer"
                       className="text-brand mt-2 inline-block text-sm font-medium underline"
                     >
-                      Abrir buscador oficial de Puntos Blue
+                      Abrir buscador oficial de sucursales
                     </a>
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
                       <FieldInput
-                        label="Nombre del Punto Blue"
+                        label="Nombre de la oficina Chilexpress"
                         error={errors.pickupPointName?.message}
                       >
                         <Input {...register("pickupPointName")} />
                       </FieldInput>
                       <FieldInput
-                        label="Dirección del Punto Blue"
+                        label="Dirección de la oficina Chilexpress"
                         error={errors.pickupPointAddress?.message}
                       >
                         <Input {...register("pickupPointAddress")} />
@@ -595,7 +595,7 @@ function MethodButton({
 function deliveryTypeLabel(
   deliveryType: "HOME" | "PICKUP_POINT" | "LOCAL_DELIVERY",
 ) {
-  if (deliveryType === "PICKUP_POINT") return "Retiro en Punto Blue";
+  if (deliveryType === "PICKUP_POINT") return "Retiro en Chilexpress";
   if (deliveryType === "LOCAL_DELIVERY") return "Entrega local";
   return "Entrega a domicilio";
 }

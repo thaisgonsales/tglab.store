@@ -172,7 +172,9 @@ export function OrderEmail(d: OrderEmailData) {
           {d.fulfillmentMethod === "SHIPPING" && d.pickupPoint && (
             <>
               <Hr style={{ borderColor: "#ece2d2", margin: "16px 0" }} />
-              <Text style={muted}>Retiro en Punto Blue: {d.pickupPoint}</Text>
+              <Text style={muted}>
+                Retiro en oficina Chilexpress: {d.pickupPoint}
+              </Text>
             </>
           )}
           {d.fulfillmentMethod === "PICKUP" && d.pickupInfo && (
