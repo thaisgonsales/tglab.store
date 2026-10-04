@@ -5,9 +5,9 @@ import { z } from "zod";
 import { getEnv } from "@/lib/env";
 
 const TEST_COVERAGE_URL =
-  "http://testservices.wschilexpress.com/georeference/api/v1.0/coverage-areas";
+  "https://testservices.wschilexpress.com/georeference/api/v1.0/coverage-areas";
 const TEST_RATING_URL =
-  "http://testservices.wschilexpress.com/rating/api/v1.0/rates/courier";
+  "https://testservices.wschilexpress.com/rating/api/v1.0/rates/courier";
 const REQUEST_TIMEOUT_MS = 8_000;
 
 const coverageResponseSchema = z.object({
@@ -70,6 +70,7 @@ function normalize(value: string): string {
 function subscriptionHeaders(key: string): HeadersInit {
   return {
     Accept: "application/json",
+    "Cache-Control": "no-cache",
     "Content-Type": "application/json",
     "Ocp-Apim-Subscription-Key": key,
   };
@@ -128,7 +129,7 @@ export class ChilexpressProvider {
           ),
           height: String(env.CHILEXPRESS_PACKAGE_HEIGHT_CM),
           width: String(env.CHILEXPRESS_PACKAGE_WIDTH_CM),
-          lenght: String(env.CHILEXPRESS_PACKAGE_LENGTH_CM),
+          length: String(env.CHILEXPRESS_PACKAGE_LENGTH_CM),
         },
         productType: 3,
         contentType: 1,
