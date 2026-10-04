@@ -999,6 +999,7 @@ model Page {
 enum DocumentType {
   BOLETA
   FACTURA
+  NOTA_CREDITO
 }
 
 enum DocumentStatus {
@@ -1018,6 +1019,7 @@ model DocumentRecord {
   issuedAt          DateTime?
   provider          String?
   externalReference String?
+  amount            Int?
   errorMessage      String?
   rawPayload        Json?
 

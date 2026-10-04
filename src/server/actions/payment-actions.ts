@@ -183,7 +183,12 @@ export async function confirmBankTransfer(
         },
       });
       await tx.documentRecord.create({
-        data: { orderId: order.id, type: "BOLETA", status: "PENDING" },
+        data: {
+          orderId: order.id,
+          type: "BOLETA",
+          status: "PENDING",
+          amount: order.grandTotal,
+        },
       });
     });
 

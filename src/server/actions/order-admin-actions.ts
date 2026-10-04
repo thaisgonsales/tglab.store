@@ -153,9 +153,17 @@ export async function cancelOrder(input: z.infer<typeof cancelSchema>) {
 const refundSchema = z.object({
   orderId: z.string().cuid(),
   amount: z.coerce.number().int().min(1),
-  reference: z.string().trim().max(120).optional(),
-  restock: z.boolean().default(true),
-  note: z.string().trim().max(500).optional(),
+  reference: z
+    .string()
+    .trim()
+    .min(3, "Ingresa la referencia del reembolso real")
+    .max(120),
+  restock: z.boolean().default(false),
+  reason: z
+    .string()
+    .trim()
+    .min(3, "Indica el motivo de la devolución")
+    .max(500),
 });
 
 /**
@@ -168,35 +176,100 @@ export async function markOrderRefunded(input: z.input<typeof refundSchema>) {
     const data = refundSchema.parse(input);
     const order = await db.order.findUnique({
       where: { id: data.orderId },
-      include: { items: true },
+      include: { items: true, payments: true, documents: true },
     });
     if (!order) throw new ActionError("Pedido no encontrado.");
     if (order.paymentStatus !== "PAID") {
       throw new ActionError("Solo se puede reembolsar un pedido pagado.");
     }
-    if (data.amount > order.grandTotal) {
-      throw new ActionError("El monto supera el total del pedido.");
+    const alreadyRefunded = order.payments.reduce(
+      (total, payment) =>
+        payment.status === "REFUNDED" && (payment.amountPaid ?? 0) < 0
+          ? total + Math.abs(payment.amountPaid ?? 0)
+          : total,
+      0,
+    );
+    const refundable = order.grandTotal - alreadyRefunded;
+    if (data.amount > refundable) {
+      throw new ActionError(
+        `El monto supera el saldo reembolsable (${refundable}).`,
+      );
+    }
+    const fullRefund = data.amount === refundable;
+    if (data.restock && (!fullRefund || alreadyRefunded > 0)) {
+      throw new ActionError(
+        "El stock completo solo puede reponerse en la primera devolución cuando cubre todo el pedido.",
+      );
+    }
+    const originalPayment = order.payments.find(
+      (payment) => payment.status === "PAID" && (payment.amountPaid ?? 0) > 0,
+    );
+    if (!originalPayment) {
+      throw new ActionError("No se encontró el pago original confirmado.");
+    }
+    if (
+      originalPayment.provider === "BANK_TRANSFER" &&
+      order.documents.some(
+        (document) =>
+          document.type === "BOLETA" && document.status !== "ISSUED",
+      )
+    ) {
+      throw new ActionError(
+        "Primero emite y registra la boleta pendiente. Luego registra el reembolso para que se genere la tarea de nota de crédito.",
+      );
+    }
+    const duplicateReference = await db.payment.findFirst({
+      where: { providerReference: data.reference },
+      select: { id: true },
+    });
+    if (duplicateReference) {
+      throw new ActionError("La referencia de reembolso ya fue registrada.");
     }
 
     await db.$transaction(async (tx) => {
-      await tx.payment.create({
+      const refundPayment = await tx.payment.create({
         data: {
           orderId: order.id,
-          provider: "BANK_TRANSFER",
-          providerReference: data.reference || `REFUND-${nanoid(10)}`,
+          provider: originalPayment.provider,
+          providerReference: data.reference,
           status: "REFUNDED",
-          amount: order.grandTotal,
+          amount: data.amount,
           amountPaid: -data.amount,
           idempotencyKey: nanoid(24),
+          rawPayload: {
+            reason: data.reason,
+            recordedManually: true,
+          },
         },
       });
       await tx.order.update({
         where: { id: order.id },
         data: {
-          paymentStatus: "REFUNDED",
+          paymentStatus: fullRefund ? "REFUNDED" : "PAID",
           status: order.status === "CANCELLED" ? "CANCELLED" : order.status,
         },
       });
+
+      const issuedBoleta = order.documents.find(
+        (document) =>
+          document.type === "BOLETA" && document.status === "ISSUED",
+      );
+      if (issuedBoleta) {
+        await tx.documentRecord.create({
+          data: {
+            orderId: order.id,
+            type: "NOTA_CREDITO",
+            status: "PENDING",
+            amount: data.amount,
+            rawPayload: {
+              refundPaymentId: refundPayment.id,
+              originalDocumentId: issuedBoleta.id,
+              originalFolio: issuedBoleta.folio,
+              reason: data.reason,
+            },
+          },
+        });
+      }
 
       if (data.restock) {
         for (const item of order.items) {
@@ -227,7 +300,7 @@ export async function markOrderRefunded(input: z.input<typeof refundSchema>) {
         data: {
           orderId: order.id,
           toStatus: order.status,
-          note: `Reembolso registrado por ${data.amount}${data.reference ? ` (ref: ${data.reference})` : ""}${data.restock ? " · stock repuesto" : ""}${data.note ? ` · ${data.note}` : ""}.`,
+          note: `${fullRefund ? "Reembolso total" : "Reembolso parcial"} registrado por ${data.amount} (ref: ${data.reference})${data.restock ? " · stock repuesto" : ""}. Motivo: ${data.reason}.${issuedBoleta ? " Nota de crédito pendiente en SII." : " Verificar reversa del voucher en el RCV."}`,
           adminUserId: session.user.id,
         },
       });
@@ -323,6 +396,59 @@ export async function recordManualBoleta(
           orderId: data.orderId,
           toStatus: document.order.status,
           note: `Boleta emitida manualmente en SII · folio ${data.folio}.`,
+          adminUserId: session.user.id,
+        },
+      });
+    });
+
+    revalidatePath(`/admin/pedidos/${data.orderId}`);
+    return null;
+  });
+}
+
+const manualCreditNoteSchema = z.object({
+  orderId: z.string().cuid(),
+  documentId: z.string().cuid(),
+  folio: z.string().trim().min(1, "Ingresa el folio").max(80),
+  issuedAt: z.coerce.date(),
+});
+
+/** Registra una nota de crédito emitida realmente en el portal del SII. */
+export async function recordManualCreditNote(
+  input: z.input<typeof manualCreditNoteSchema>,
+) {
+  return staffAction(async (session) => {
+    const data = manualCreditNoteSchema.parse(input);
+    const document = await db.documentRecord.findFirst({
+      where: {
+        id: data.documentId,
+        orderId: data.orderId,
+        type: "NOTA_CREDITO",
+      },
+      include: { order: { select: { status: true } } },
+    });
+    if (!document) throw new ActionError("Nota de crédito no encontrada.");
+    if (document.status === "ISSUED") {
+      throw new ActionError("La nota de crédito ya fue registrada.");
+    }
+
+    await db.$transaction(async (tx) => {
+      await tx.documentRecord.update({
+        where: { id: document.id },
+        data: {
+          status: "ISSUED",
+          folio: data.folio,
+          issuedAt: data.issuedAt,
+          provider: "SII_MANUAL",
+          externalReference: data.folio,
+          errorMessage: null,
+        },
+      });
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: data.orderId,
+          toStatus: document.order.status,
+          note: `Nota de crédito emitida manualmente en SII · folio ${data.folio} · monto ${document.amount ?? 0}.`,
           adminUserId: session.user.id,
         },
       });

@@ -185,13 +185,22 @@ export default async function AdminOrderDetailPage({
           trackingNumber: order.trackingNumber ?? "",
           trackingUrl: order.trackingUrl ?? "",
           internalNotes: order.internalNotes ?? "",
-          document: order.documents[0]
-            ? {
-                id: order.documents[0].id,
-                status: order.documents[0].status,
-                folio: order.documents[0].folio ?? "",
-              }
-            : null,
+          grandTotal: order.grandTotal,
+          shippingTotal: order.shippingTotal,
+          refundedTotal: order.payments.reduce(
+            (total, payment) =>
+              payment.status === "REFUNDED" && (payment.amountPaid ?? 0) < 0
+                ? total + Math.abs(payment.amountPaid ?? 0)
+                : total,
+            0,
+          ),
+          documents: order.documents.map((document) => ({
+            id: document.id,
+            type: document.type,
+            status: document.status,
+            folio: document.folio ?? "",
+            amount: document.amount,
+          })),
         }}
       />
 
@@ -253,6 +262,7 @@ export default async function AdminOrderDetailPage({
                 <p key={d.id}>
                   {d.type}: {d.status}
                   {d.folio ? ` · folio ${d.folio}` : ""}
+                  {d.amount ? ` · ${formatCLP(d.amount)}` : ""}
                 </p>
               ))}
               <p className="text-foreground-muted mt-1 text-xs">

@@ -17,6 +17,7 @@ import {
   changeOrderStatus,
   markOrderRefunded,
   recordManualBoleta,
+  recordManualCreditNote,
   updateOrderTracking,
 } from "@/server/actions/order-admin-actions";
 
@@ -40,7 +41,16 @@ type Order = {
   trackingNumber: string;
   trackingUrl: string;
   internalNotes: string;
-  document: { id: string; status: string; folio: string } | null;
+  grandTotal: number;
+  shippingTotal: number;
+  refundedTotal: number;
+  documents: {
+    id: string;
+    type: string;
+    status: string;
+    folio: string;
+    amount: number | null;
+  }[];
 };
 
 export function OrderActions({ order }: { order: Order }) {
@@ -52,12 +62,33 @@ export function OrderActions({ order }: { order: Order }) {
   const [refund, setRefund] = useState({
     amount: "",
     reference: "",
-    restock: true,
+    reason: "",
+    restock: false,
   });
+  const pendingBoleta = order.documents.find(
+    (document) => document.type === "BOLETA" && document.status !== "ISSUED",
+  );
+  const pendingCreditNotes = order.documents.filter(
+    (document) =>
+      document.type === "NOTA_CREDITO" && document.status !== "ISSUED",
+  );
   const [boleta, setBoleta] = useState({
-    folio: order.document?.folio ?? "",
+    folio: pendingBoleta?.folio ?? "",
     issuedAt: new Date().toISOString().slice(0, 16),
   });
+  const [creditNotes, setCreditNotes] = useState<
+    Record<string, { folio: string; issuedAt: string }>
+  >(() =>
+    Object.fromEntries(
+      pendingCreditNotes.map((document) => [
+        document.id,
+        {
+          folio: document.folio,
+          issuedAt: new Date().toISOString().slice(0, 16),
+        },
+      ]),
+    ),
+  );
   const [tracking, setTracking] = useState({
     carrier: order.carrier,
     trackingNumber: order.trackingNumber,
@@ -93,11 +124,20 @@ export function OrderActions({ order }: { order: Order }) {
     successMessage: "Boleta registrada",
     onSuccess: () => router.refresh(),
   });
+  const issueCreditNote = useAction(recordManualCreditNote, {
+    successMessage: "Nota de crédito registrada",
+    onSuccess: () => router.refresh(),
+  });
 
   const options = NEXT_STATUS[order.status] ?? [];
   const canCancel =
     order.status !== "CANCELLED" && order.status !== "DELIVERED";
-  const canRefund = order.paymentStatus === "PAID";
+  const refundableTotal = Math.max(0, order.grandTotal - order.refundedTotal);
+  const canRefund =
+    order.paymentStatus === "PAID" && refundableTotal > 0;
+  const refundAmount = Number(refund.amount);
+  const mayRestockAll =
+    order.refundedTotal === 0 && refundAmount === order.grandTotal;
 
   return (
     <Card>
@@ -105,7 +145,7 @@ export function OrderActions({ order }: { order: Order }) {
         <CardTitle>Gestión</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        {order.paymentStatus !== "PAID" && (
+        {order.paymentStatus === "PENDING" && (
           <div className="border-border rounded-md border p-3">
             <p className="text-sm font-medium">
               Confirmar pago por transferencia
@@ -189,23 +229,92 @@ export function OrderActions({ order }: { order: Order }) {
           </div>
         )}
 
-        {order.paymentStatus === "PAID" &&
-          order.document &&
-          order.document.status !== "ISSUED" && (
-            <div className="border-border rounded-md border p-3">
-              <p className="text-sm font-medium">Registrar boleta del SII</p>
-              <p className="text-foreground-muted text-xs">
-                Emite primero la boleta en el portal del SII y registra aquí su
-                folio. Esta acción no emite el documento automáticamente.
+        {order.paymentStatus === "PAID" && pendingBoleta && (
+          <div className="border-border rounded-md border p-3">
+            <p className="text-sm font-medium">Registrar boleta del SII</p>
+            <p className="text-foreground-muted text-xs">
+              Emite primero la boleta en el portal del SII y registra aquí su
+              folio. Debe ser por el total del pedido, incluido el despacho:{" "}
+              <strong>{formatMoney(order.grandTotal)}</strong>. Esta acción no
+              emite el documento automáticamente.
+            </p>
+            <div className="mt-2 flex flex-wrap items-end gap-2">
+              <div>
+                <Label className="text-xs">Folio</Label>
+                <Input
+                  className="w-40"
+                  value={boleta.folio}
+                  onChange={(event) =>
+                    setBoleta({ ...boleta, folio: event.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Fecha de emisión</Label>
+                <Input
+                  className="w-52"
+                  type="datetime-local"
+                  value={boleta.issuedAt}
+                  onChange={(event) =>
+                    setBoleta({ ...boleta, issuedAt: event.target.value })
+                  }
+                />
+              </div>
+              <ConfirmDialog
+                title="Registrar boleta emitida"
+                description="Confirma que la boleta ya fue emitida realmente en el portal del SII."
+                confirmLabel="Registrar folio"
+                onConfirm={() =>
+                  issueBoleta.run({
+                    orderId: order.id,
+                    documentId: pendingBoleta.id,
+                    folio: boleta.folio,
+                    issuedAt: boleta.issuedAt,
+                  })
+                }
+                trigger={
+                  <Button
+                    size="sm"
+                    disabled={!boleta.folio.trim() || issueBoleta.isPending}
+                  >
+                    Registrar boleta
+                  </Button>
+                }
+              />
+            </div>
+          </div>
+        )}
+
+        {pendingCreditNotes.map((document) => {
+          const form = creditNotes[document.id] ?? {
+            folio: document.folio,
+            issuedAt: new Date().toISOString().slice(0, 16),
+          };
+          return (
+            <div
+              key={document.id}
+              className="rounded-md border border-amber-300 bg-amber-50 p-3"
+            >
+              <p className="text-sm font-medium text-amber-900">
+                Nota de crédito pendiente en el SII
+              </p>
+              <p className="text-xs text-amber-800">
+                Emite una nota de crédito por{" "}
+                {formatMoney(document.amount ?? 0)} asociada a la boleta
+                original. Luego registra aquí el folio. La tienda no la emite
+                automáticamente.
               </p>
               <div className="mt-2 flex flex-wrap items-end gap-2">
                 <div>
                   <Label className="text-xs">Folio</Label>
                   <Input
                     className="w-40"
-                    value={boleta.folio}
+                    value={form.folio}
                     onChange={(event) =>
-                      setBoleta({ ...boleta, folio: event.target.value })
+                      setCreditNotes({
+                        ...creditNotes,
+                        [document.id]: { ...form, folio: event.target.value },
+                      })
                     }
                   />
                 </div>
@@ -214,36 +323,43 @@ export function OrderActions({ order }: { order: Order }) {
                   <Input
                     className="w-52"
                     type="datetime-local"
-                    value={boleta.issuedAt}
+                    value={form.issuedAt}
                     onChange={(event) =>
-                      setBoleta({ ...boleta, issuedAt: event.target.value })
+                      setCreditNotes({
+                        ...creditNotes,
+                        [document.id]: {
+                          ...form,
+                          issuedAt: event.target.value,
+                        },
+                      })
                     }
                   />
                 </div>
                 <ConfirmDialog
-                  title="Registrar boleta emitida"
-                  description="Confirma que la boleta ya fue emitida realmente en el portal del SII."
+                  title="Registrar nota de crédito"
+                  description="Confirma que la nota de crédito ya fue emitida realmente en el portal del SII."
                   confirmLabel="Registrar folio"
                   onConfirm={() =>
-                    issueBoleta.run({
+                    issueCreditNote.run({
                       orderId: order.id,
-                      documentId: order.document!.id,
-                      folio: boleta.folio,
-                      issuedAt: boleta.issuedAt,
+                      documentId: document.id,
+                      folio: form.folio,
+                      issuedAt: form.issuedAt,
                     })
                   }
                   trigger={
                     <Button
                       size="sm"
-                      disabled={!boleta.folio.trim() || issueBoleta.isPending}
+                      disabled={!form.folio.trim() || issueCreditNote.isPending}
                     >
-                      Registrar boleta
+                      Registrar nota de crédito
                     </Button>
                   }
                 />
               </div>
             </div>
-          )}
+          );
+        })}
 
         <div className="border-border rounded-md border p-3">
           <p className="mb-2 text-sm font-medium">
@@ -312,8 +428,10 @@ export function OrderActions({ order }: { order: Order }) {
           <div className="border-border rounded-md border p-3">
             <p className="mb-1 text-sm font-medium">Registrar reembolso</p>
             <p className="text-foreground-muted text-xs">
-              Anota un reembolso ya hecho por fuera (Mercado Pago /
-              transferencia). Opcionalmente repone el stock. No mueve dinero.
+              Primero devuelve realmente el dinero en Mercado Pago o por
+              transferencia. Después registra aquí la misma referencia. Esta
+              acción no mueve dinero. Saldo máximo:{" "}
+              {formatMoney(refundableTotal)}.
             </p>
             <div className="mt-2 flex flex-wrap items-end gap-2">
               <Input
@@ -327,40 +445,57 @@ export function OrderActions({ order }: { order: Order }) {
               />
               <Input
                 className="w-40"
-                placeholder="Referencia (opcional)"
+                placeholder="Referencia obligatoria"
                 value={refund.reference}
                 onChange={(e) =>
                   setRefund({ ...refund, reference: e.target.value })
+                }
+              />
+              <Input
+                className="min-w-56 flex-1"
+                placeholder="Motivo obligatorio"
+                value={refund.reason}
+                onChange={(e) =>
+                  setRefund({ ...refund, reason: e.target.value })
                 }
               />
               <label className="flex items-center gap-1.5 text-sm">
                 <input
                   type="checkbox"
                   checked={refund.restock}
+                  disabled={!mayRestockAll}
                   onChange={(e) =>
                     setRefund({ ...refund, restock: e.target.checked })
                   }
                 />
-                Reponer stock
+                Reponer todo el stock
               </label>
               <ConfirmDialog
                 title="Registrar reembolso"
-                description="Marca el pedido como reembolsado y (si corresponde) repone el stock."
+                description="Confirma que el dinero ya fue devuelto fuera de la tienda. El registro no ejecuta el pago."
                 confirmLabel="Registrar"
                 destructive
                 onConfirm={() =>
                   doRefund.run({
                     orderId: order.id,
                     amount: refund.amount,
-                    reference: refund.reference || undefined,
+                    reference: refund.reference,
                     restock: refund.restock,
+                    reason: refund.reason,
                   })
                 }
                 trigger={
                   <Button
                     size="sm"
                     variant="outline"
-                    disabled={!refund.amount || doRefund.isPending}
+                    disabled={
+                      !Number.isInteger(refundAmount) ||
+                      refundAmount < 1 ||
+                      refundAmount > refundableTotal ||
+                      refund.reference.trim().length < 3 ||
+                      refund.reason.trim().length < 3 ||
+                      doRefund.isPending
+                    }
                   >
                     Registrar reembolso
                   </Button>
@@ -413,4 +548,12 @@ export function OrderActions({ order }: { order: Order }) {
       </CardContent>
     </Card>
   );
+}
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat("es-CL", {
+    style: "currency",
+    currency: "CLP",
+    maximumFractionDigits: 0,
+  }).format(value);
 }
