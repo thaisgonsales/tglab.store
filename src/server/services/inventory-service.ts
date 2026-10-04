@@ -253,14 +253,14 @@ export async function releaseExpiredReservations(): Promise<number> {
       if (order.paymentStatus === "PENDING") {
         await tx.order.update({
           where: { id: orderId },
-          data: { paymentStatus: "EXPIRED", status: "CANCELLED" },
+          data: { paymentStatus: "EXPIRED" },
         });
         await tx.orderStatusHistory.create({
           data: {
             orderId,
             fromStatus: order.status,
-            toStatus: "CANCELLED",
-            note: "Pago no completado dentro del plazo.",
+            toStatus: order.status,
+            note: "Ventana de pago vencida; stock liberado. El pedido no fue cancelado automáticamente.",
           },
         });
       }

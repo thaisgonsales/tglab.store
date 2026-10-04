@@ -5,7 +5,11 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 
 import type { OrderStatus } from "@/generated/prisma/client";
-import { ActionError, staffAction } from "@/server/auth/action-guard";
+import {
+  ActionError,
+  ownerAction,
+  staffAction,
+} from "@/server/auth/action-guard";
 import { db } from "@/server/db";
 import {
   recordMovement,
@@ -86,6 +90,7 @@ export async function changeOrderStatus(
 const cancelSchema = z.object({
   orderId: z.string().cuid(),
   reason: z.string().trim().min(3, "Indica un motivo").max(500),
+  ownerConfirmation: z.string().trim().min(1),
 });
 
 /**
@@ -95,10 +100,15 @@ const cancelSchema = z.object({
  *    del dinero se registra aparte con `markOrderRefunded`).
  */
 export async function cancelOrder(input: z.infer<typeof cancelSchema>) {
-  return staffAction(async (session) => {
-    const { orderId, reason } = cancelSchema.parse(input);
+  return ownerAction(async (session) => {
+    const { orderId, reason, ownerConfirmation } = cancelSchema.parse(input);
     const order = await db.order.findUnique({ where: { id: orderId } });
     if (!order) throw new ActionError("Pedido no encontrado.");
+    if (ownerConfirmation.toUpperCase() !== order.number.toUpperCase()) {
+      throw new ActionError(
+        `Escribe ${order.number} para confirmar personalmente la cancelación.`,
+      );
+    }
     if (order.status === "CANCELLED") {
       throw new ActionError("El pedido ya está cancelado.");
     }
@@ -169,6 +179,9 @@ const refundSchema = z.object({
     "DEFECT_OR_NONCONFORMITY",
     "AGREED_EXCEPTION",
   ]),
+  ownerConfirmation: z.string().trim().min(1),
+  deliveryReviewed: z.literal(true),
+  moneyReturned: z.literal(true),
 });
 
 /**
@@ -177,13 +190,18 @@ const refundSchema = z.object({
  * (La integración con la API de reembolsos del proveedor es una fase posterior.)
  */
 export async function markOrderRefunded(input: z.input<typeof refundSchema>) {
-  return staffAction(async (session) => {
+  return ownerAction(async (session) => {
     const data = refundSchema.parse(input);
     const order = await db.order.findUnique({
       where: { id: data.orderId },
       include: { items: true, payments: true, documents: true },
     });
     if (!order) throw new ActionError("Pedido no encontrado.");
+    if (data.ownerConfirmation.toUpperCase() !== order.number.toUpperCase()) {
+      throw new ActionError(
+        `Escribe ${order.number} para confirmar personalmente el registro.`,
+      );
+    }
     if (order.paymentStatus !== "PAID") {
       throw new ActionError("Solo se puede reembolsar un pedido pagado.");
     }

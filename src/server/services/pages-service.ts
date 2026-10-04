@@ -131,6 +131,7 @@ const DEFAULTS: Record<string, { title: string; body: string[] }> = {
       "Cuando corresponda la **garantía legal**, podrás elegir entre reparación gratuita, cambio o devolución del dinero dentro de los **6 meses siguientes a la entrega**. Coordinaremos contigo la devolución del producto. **Si se confirma una falla o un error atribuible a TG LAB, el envío necesario para resolverlo no tendrá costo para ti.**",
       "La garantía legal no cubre daños causados por un uso indebido, golpes o modificaciones posteriores a la entrega, cuando esas circunstancias sean la causa del problema.",
       "## Reembolsos",
+      "Toda solicitud de cancelación, devolución o reembolso será revisada manualmente por TG LAB. Enviar una solicitud no significa que haya sido aprobada y el sitio no devuelve dinero automáticamente. Antes de resolver revisaremos el estado del pedido, la fabricación, la entrega, el seguimiento y la causal informada.",
       "Si corresponde devolver el dinero, te confirmaremos el monto y la forma de pago por correo electrónico. El reembolso podrá realizarse mediante **transferencia bancaria a una cuenta que nos indiques**; solicitaremos los datos necesarios a través del correo asociado a tu pedido.",
       "En los casos de retracto, realizaremos la devolución del dinero **a la mayor brevedad posible y dentro del plazo legal contado desde que nos comuniques tu decisión**. La revisión del producto devuelto no suspende ese plazo.",
       "## ¿Cómo hacer una solicitud?",

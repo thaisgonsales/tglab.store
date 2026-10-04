@@ -60,6 +60,7 @@ export function OrderActions({ order }: { order: Order }) {
   const [note, setNote] = useState("");
   const [ref, setRef] = useState("");
   const [cancelReason, setCancelReason] = useState("");
+  const [cancelConfirmation, setCancelConfirmation] = useState("");
   const [refund, setRefund] = useState({
     amount: "",
     reference: "",
@@ -67,6 +68,9 @@ export function OrderActions({ order }: { order: Order }) {
     refundReason: "CHANGE_OF_MIND" as
       "CHANGE_OF_MIND" | "DEFECT_OR_NONCONFORMITY" | "AGREED_EXCEPTION",
     restock: false,
+    ownerConfirmation: "",
+    deliveryReviewed: false,
+    moneyReturned: false,
   });
   const pendingBoleta = order.documents.find(
     (document) => document.type === "BOLETA" && document.status !== "ISSUED",
@@ -432,8 +436,8 @@ export function OrderActions({ order }: { order: Order }) {
             <p className="text-foreground-muted text-xs">
               Primero devuelve realmente el dinero en Mercado Pago o por
               transferencia. Después registra aquí la misma referencia. Esta
-              acción no mueve dinero. Saldo máximo:{" "}
-              {formatMoney(refundableTotal)}.
+              acción no mueve dinero y solo la propietaria puede confirmarla.
+              Saldo máximo: {formatMoney(refundableTotal)}.
             </p>
             <div className="mt-2 flex flex-wrap items-end gap-2">
               <Select
@@ -480,6 +484,17 @@ export function OrderActions({ order }: { order: Order }) {
                   setRefund({ ...refund, reason: e.target.value })
                 }
               />
+              <Input
+                className="w-44"
+                placeholder={`Escribe ${order.number}`}
+                value={refund.ownerConfirmation}
+                onChange={(event) =>
+                  setRefund({
+                    ...refund,
+                    ownerConfirmation: event.target.value,
+                  })
+                }
+              />
               <label className="flex items-center gap-1.5 text-sm">
                 <input
                   type="checkbox"
@@ -490,6 +505,32 @@ export function OrderActions({ order }: { order: Order }) {
                   }
                 />
                 Reponer todo el stock
+              </label>
+              <label className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={refund.deliveryReviewed}
+                  onChange={(event) =>
+                    setRefund({
+                      ...refund,
+                      deliveryReviewed: event.target.checked,
+                    })
+                  }
+                />
+                Revisé entrega y seguimiento
+              </label>
+              <label className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={refund.moneyReturned}
+                  onChange={(event) =>
+                    setRefund({
+                      ...refund,
+                      moneyReturned: event.target.checked,
+                    })
+                  }
+                />
+                El dinero ya fue devuelto realmente
               </label>
               <ConfirmDialog
                 title="Registrar reembolso"
@@ -504,6 +545,9 @@ export function OrderActions({ order }: { order: Order }) {
                     restock: refund.restock,
                     reason: refund.reason,
                     refundReason: refund.refundReason,
+                    ownerConfirmation: refund.ownerConfirmation,
+                    deliveryReviewed: true,
+                    moneyReturned: true,
                   })
                 }
                 trigger={
@@ -516,6 +560,10 @@ export function OrderActions({ order }: { order: Order }) {
                       refundAmount > refundableTotal ||
                       refund.reference.trim().length < 3 ||
                       refund.reason.trim().length < 3 ||
+                      refund.ownerConfirmation.trim().toUpperCase() !==
+                        order.number.toUpperCase() ||
+                      !refund.deliveryReviewed ||
+                      !refund.moneyReturned ||
                       (order.hasPersonalizedItems &&
                         refund.refundReason === "CHANGE_OF_MIND") ||
                       doRefund.isPending
@@ -553,20 +601,33 @@ export function OrderActions({ order }: { order: Order }) {
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
               />
+              <Input
+                className="max-w-xs"
+                placeholder={`Escribe ${order.number} para confirmar`}
+                value={cancelConfirmation}
+                onChange={(event) => setCancelConfirmation(event.target.value)}
+              />
               <ConfirmDialog
                 title="Cancelar pedido"
                 description="Se notifica al cliente por email con el motivo indicado."
                 confirmLabel="Cancelar pedido"
                 destructive
                 onConfirm={() =>
-                  cancel.run({ orderId: order.id, reason: cancelReason.trim() })
+                  cancel.run({
+                    orderId: order.id,
+                    reason: cancelReason.trim(),
+                    ownerConfirmation: cancelConfirmation,
+                  })
                 }
                 trigger={
                   <Button
                     size="sm"
                     variant="danger"
                     disabled={
-                      cancelReason.trim().length < 3 || cancel.isPending
+                      cancelReason.trim().length < 3 ||
+                      cancel.isPending ||
+                      cancelConfirmation.trim().toUpperCase() !==
+                        order.number.toUpperCase()
                     }
                   >
                     Cancelar pedido
