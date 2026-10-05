@@ -37,6 +37,7 @@ export function ProductPurchase({
   productName,
   attributes,
   variants,
+  attributeMedia,
   customFields,
   lowStockThreshold,
   lastUnitsThreshold,
@@ -45,6 +46,7 @@ export function ProductPurchase({
   productName: string;
   attributes: SelectableAttribute[];
   variants: PurchaseVariant[];
+  attributeMedia: { attributeValueId: string; mediaId: string }[];
   customFields: CustomFieldDef[];
   lowStockThreshold: number;
   lastUnitsThreshold: number;
@@ -68,9 +70,15 @@ export function ProductPurchase({
     [variants, selection, attributes],
   );
 
-  const variantMediaId = useMemo(() => {
+  const selectedMediaIds = useMemo(() => {
     const exact = variants.find((candidate) => candidate.id === variant?.id);
-    if (exact?.mediaIds?.[0]) return exact.mediaIds[0];
+    const ids = new Set(exact?.mediaIds ?? []);
+    for (const valueId of Object.values(selection)) {
+      for (const linked of attributeMedia) {
+        if (linked.attributeValueId === valueId) ids.add(linked.mediaId);
+      }
+    }
+    if (ids.size > 0) return [...ids];
 
     // Una foto debe reaccionar desde el primer clic (por ejemplo, Color:
     // Verde), aunque todavía falte escoger otra opción como tamaño.
@@ -82,16 +90,16 @@ export function ProductPurchase({
             candidate.options[attributeId] === valueId,
         ),
     );
-    return partial?.mediaIds?.[0];
-  }, [selection, variant?.id, variants]);
+    return partial?.mediaIds ?? [];
+  }, [attributeMedia, selection, variant?.id, variants]);
 
   useEffect(() => {
-    const mediaId = variantMediaId;
-    if (!mediaId) return;
     window.dispatchEvent(
-      new CustomEvent("tglab:variant-media", { detail: { mediaId } }),
+      new CustomEvent("tglab:variant-media", {
+        detail: { mediaIds: selectedMediaIds },
+      }),
     );
-  }, [variantMediaId]);
+  }, [selectedMediaIds]);
 
   useEffect(() => {
     const from = Math.min(...variants.map((v) => v.price));

@@ -313,10 +313,16 @@ model ProductMedia {
   variantId String?
   variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
 
+  // asociación opcional a un valor compartido (por ejemplo Color: Verde).
+  // Permite que la misma galería sirva para Verde/S, Verde/M, etc.
+  attributeValueId String?
+  attributeValue   AttributeValue? @relation(fields: [attributeValueId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
 
   @@index([productId, position])
   @@index([variantId])
+  @@index([attributeValueId])
   @@map("product_media")
 }
 
@@ -358,6 +364,7 @@ model AttributeValue {
   position Int     @default(0)
 
   variantLinks VariantAttributeValue[]
+  media        ProductMedia[]
 
   @@unique([attributeId, slug])
   @@index([attributeId, position])

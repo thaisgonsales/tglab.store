@@ -1,6 +1,7 @@
 import "server-only";
 
 import { discountPercent } from "@/lib/money";
+import { selectVariantImage } from "@/lib/product-media";
 import { db } from "@/server/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { evaluateCoupon } from "@/server/services/coupon-service";
@@ -89,8 +90,12 @@ const cartInclude = {
                   { isPrimary: "desc" as const },
                   { position: "asc" as const },
                 ],
-                take: 1,
-                select: { url: true },
+                select: {
+                  url: true,
+                  isPrimary: true,
+                  variantId: true,
+                  attributeValueId: true,
+                },
               },
             },
           },
@@ -146,6 +151,12 @@ export async function quoteCart(input: QuoteInput): Promise<Quote> {
       ? (item.customizations as { key: string; label: string; value: string }[])
       : [];
 
+    const image = selectVariantImage(
+      v.product.media,
+      v.id,
+      v.attributeValues.map((value) => value.attributeValueId),
+    );
+
     return {
       cartItemId: item.id,
       variantId: v.id,
@@ -153,7 +164,7 @@ export async function quoteCart(input: QuoteInput): Promise<Quote> {
       productName: v.product.name,
       variantLabel: label,
       sku: v.sku,
-      imageUrl: v.product.media[0]?.url ?? null,
+      imageUrl: image?.url ?? null,
       unitPrice: v.price,
       compareAtUnitPrice:
         v.compareAtPrice && v.compareAtPrice > v.price

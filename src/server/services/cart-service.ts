@@ -6,6 +6,7 @@ import { nanoid } from "nanoid";
 import { CART_COOKIE_NAME, CART_TTL_DAYS } from "@/config/constants";
 import { db } from "@/server/db";
 import { discountPercent } from "@/lib/money";
+import { selectVariantImage } from "@/lib/product-media";
 
 /**
  * Servicio de carrito (server-side, persistente por cookie).
@@ -130,8 +131,12 @@ export async function getCartView(): Promise<CartView> {
                     media: {
                       where: { type: "IMAGE" },
                       orderBy: [{ isPrimary: "desc" }, { position: "asc" }],
-                      take: 1,
-                      select: { url: true },
+                      select: {
+                        url: true,
+                        isPrimary: true,
+                        variantId: true,
+                        attributeValueId: true,
+                      },
                     },
                   },
                 },
@@ -158,6 +163,12 @@ export async function getCartView(): Promise<CartView> {
         ? (item.customizations as { label: string; value: string }[])
         : [];
 
+      const image = selectVariantImage(
+        v.product.media,
+        v.id,
+        v.attributeValues.map((value) => value.attributeValueId),
+      );
+
       return {
         id: item.id,
         quantity: item.quantity,
@@ -166,7 +177,7 @@ export async function getCartView(): Promise<CartView> {
         productSlug: v.product.slug,
         variantId: v.id,
         variantLabel: label,
-        imageUrl: v.product.media[0]?.url ?? null,
+        imageUrl: image?.url ?? null,
         unitPrice: v.price,
         compareAtUnitPrice:
           v.compareAtPrice && v.compareAtPrice > v.price

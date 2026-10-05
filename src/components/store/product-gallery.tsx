@@ -14,6 +14,8 @@ export type GalleryMedia = {
   posterUrl: string | null;
   alt: string | null;
   blurDataUrl: string | null;
+  variantId: string | null;
+  attributeValueId: string | null;
 };
 
 function embedUrl(url: string): string | null {
@@ -34,25 +36,35 @@ export function ProductGallery({
   productName: string;
 }) {
   const [index, setIndex] = useState(0);
+  const [selectedMediaIds, setSelectedMediaIds] = useState<string[] | null>(
+    null,
+  );
   const [zoom, setZoom] = useState(false);
   const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     function showVariantMedia(event: Event) {
-      const mediaId = (event as CustomEvent<{ mediaId?: string }>).detail
-        ?.mediaId;
-      const nextIndex = media.findIndex((item) => item.id === mediaId);
-      if (nextIndex >= 0) {
-        setIndex(nextIndex);
-        setZoom(false);
-      }
+      const mediaIds = (event as CustomEvent<{ mediaIds?: string[] }>).detail
+        ?.mediaIds;
+      setSelectedMediaIds(mediaIds?.length ? mediaIds : null);
+      setIndex(0);
+      setZoom(false);
     }
     window.addEventListener("tglab:variant-media", showVariantMedia);
     return () =>
       window.removeEventListener("tglab:variant-media", showVariantMedia);
   }, [media]);
 
-  if (media.length === 0) {
+  const generalMedia = media.filter(
+    (item) => !item.variantId && !item.attributeValueId,
+  );
+  const visibleMedia = selectedMediaIds
+    ? media.filter((item) => selectedMediaIds.includes(item.id))
+    : generalMedia.length > 0
+      ? generalMedia
+      : media;
+
+  if (visibleMedia.length === 0) {
     return (
       <div className="rounded-card bg-surface-muted text-foreground-muted flex aspect-square items-center justify-center text-sm">
         Sin imagen
@@ -60,9 +72,9 @@ export function ProductGallery({
     );
   }
 
-  const current = media[Math.min(index, media.length - 1)]!;
+  const current = visibleMedia[Math.min(index, visibleMedia.length - 1)]!;
   const go = (delta: number) =>
-    setIndex((i) => (i + delta + media.length) % media.length);
+    setIndex((i) => (i + delta + visibleMedia.length) % visibleMedia.length);
 
   return (
     <div className="space-y-3">
@@ -121,7 +133,7 @@ export function ProductGallery({
           />
         )}
 
-        {media.length > 1 && (
+        {visibleMedia.length > 1 && (
           <>
             <button
               type="button"
@@ -143,9 +155,9 @@ export function ProductGallery({
         )}
       </div>
 
-      {media.length > 1 && (
+      {visibleMedia.length > 1 && (
         <ul className="flex gap-2 overflow-x-auto">
-          {media.map((m, i) => (
+          {visibleMedia.map((m, i) => (
             <li key={m.id}>
               <button
                 type="button"

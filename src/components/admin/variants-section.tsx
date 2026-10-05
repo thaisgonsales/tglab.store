@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AttributeFormDialog } from "@/components/admin/attribute-form-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -21,7 +22,7 @@ export type AttributeOption = {
   id: string;
   name: string;
   type: "SELECT" | "COLOR";
-  values: { id: string; label: string; hex: string }[];
+  values: { id: string; label: string; hex: string; imageUrl: string }[];
 };
 
 export type VariantRow = {
@@ -76,6 +77,18 @@ export function VariantsSection({
   const assignedAttrs = useMemo(
     () => allAttributes.filter((a) => assigned.includes(a.id)),
     [allAttributes, assigned],
+  );
+  const duplicateNames = new Set(
+    allAttributes
+      .filter(
+        (attribute, index) =>
+          allAttributes.findIndex(
+            (candidate) =>
+              candidate.name.toLocaleLowerCase("es-CL") ===
+              attribute.name.toLocaleLowerCase("es-CL"),
+          ) !== index,
+      )
+      .map((attribute) => attribute.name.toLocaleLowerCase("es-CL")),
   );
 
   function toggleAttr(id: string) {
@@ -151,6 +164,13 @@ export function VariantsSection({
             </button>
           ))}
         </div>
+        {duplicateNames.size > 0 && (
+          <p className="mt-2 text-xs text-amber-700">
+            Hay atributos repetidos. Usa un solo atributo “Color” y agrega
+            dentro Verde, Rosado y los demás colores; después desmarca el
+            duplicado.
+          </p>
+        )}
         <Button
           type="button"
           size="sm"
@@ -171,9 +191,21 @@ export function VariantsSection({
           <div className="space-y-3">
             {assignedAttrs.map((a) => (
               <div key={a.id}>
-                <p className="text-foreground-muted mb-1 text-xs uppercase">
-                  {a.name}
-                </p>
+                <div className="mb-1 flex items-center justify-between gap-3">
+                  <p className="text-foreground-muted text-xs uppercase">
+                    {a.name}
+                  </p>
+                  <AttributeFormDialog
+                    attribute={{ ...a, productCount: 1 }}
+                    trigger={
+                      <Button type="button" variant="ghost" size="sm">
+                        {a.type === "COLOR"
+                          ? "Editar nombres y colores"
+                          : "Editar valores"}
+                      </Button>
+                    }
+                  />
+                </div>
                 <div className="flex flex-wrap gap-1.5">
                   {a.values.map((v) => {
                     const on = (selection[a.id] ?? []).includes(v.id);

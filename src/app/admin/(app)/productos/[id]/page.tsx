@@ -62,9 +62,17 @@ export default async function EditProductPage({
           id: v.id,
           label: v.label,
           hex: v.hex ?? "",
+          imageUrl: v.imageUrl ?? "",
         })),
       }))}
       assignedAttributeIds={assignedAttributeIds}
+      usedAttributeValueIds={[
+        ...new Set(
+          product.variants.flatMap((variant) =>
+            variant.attributeValues.map((value) => value.attributeValueId),
+          ),
+        ),
+      ]}
       variants={variantRows}
       customFields={product.customFields.map((f) => ({
         id: f.id,
@@ -114,6 +122,7 @@ export default async function EditProductPage({
         alt: m.alt,
         isPrimary: m.isPrimary,
         variantId: m.variantId,
+        attributeValueId: m.attributeValueId,
       }))}
     />
   );

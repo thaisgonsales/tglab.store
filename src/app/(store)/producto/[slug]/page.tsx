@@ -117,6 +117,12 @@ export default async function ProductPage({
       v.attributeValues.map((av) => [av.attributeId, av.attributeValueId]),
     ),
   }));
+  const attributeMedia = product.media
+    .filter((media) => media.attributeValueId)
+    .map((media) => ({
+      attributeValueId: media.attributeValueId!,
+      mediaId: media.id,
+    }));
 
   const description =
     product.description &&
@@ -209,6 +215,8 @@ export default async function ProductPage({
             posterUrl: m.posterUrl,
             alt: m.alt,
             blurDataUrl: m.blurDataUrl,
+            variantId: m.variantId,
+            attributeValueId: m.attributeValueId,
           }))}
         />
 
@@ -259,6 +267,7 @@ export default async function ProductPage({
               productName={product.name}
               attributes={attributes}
               variants={variants}
+              attributeMedia={attributeMedia}
               customFields={product.customFields.map((f) => ({
                 key: f.key,
                 label: f.label,

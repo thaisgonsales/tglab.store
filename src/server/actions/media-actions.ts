@@ -130,18 +130,24 @@ export async function setPrimaryMedia(mediaId: string) {
   });
 }
 
-const mediaVariantSchema = z.object({
-  mediaId: z.string().cuid(),
-  variantId: z.string().cuid().nullable(),
-});
+const mediaAssociationSchema = z
+  .object({
+    mediaId: z.string().cuid(),
+    variantId: z.string().cuid().nullable(),
+    attributeValueId: z.string().cuid().nullable(),
+  })
+  .refine((value) => !(value.variantId && value.attributeValueId), {
+    message: "Elige un color o una variante, no ambos.",
+  });
 
-/** Asocia una foto a la combinación que debe mostrarla en la tienda. */
-export async function setProductMediaVariant(input: {
+/** Asocia una foto a un color/valor compartido o a una combinación exacta. */
+export async function setProductMediaAssociation(input: {
   mediaId: string;
   variantId: string | null;
+  attributeValueId: string | null;
 }) {
   return staffAction(async () => {
-    const data = mediaVariantSchema.parse(input);
+    const data = mediaAssociationSchema.parse(input);
     const media = await db.productMedia.findUnique({
       where: { id: data.mediaId },
       select: { productId: true, type: true },
@@ -159,9 +165,29 @@ export async function setProductMediaVariant(input: {
         throw new ActionError("La variante no pertenece a este producto.");
       }
     }
+    if (data.attributeValueId) {
+      const value = await db.attributeValue.findFirst({
+        where: {
+          id: data.attributeValueId,
+          attribute: {
+            products: { some: { productId: media.productId } },
+          },
+          variantLinks: {
+            some: { variant: { productId: media.productId } },
+          },
+        },
+        select: { id: true },
+      });
+      if (!value) {
+        throw new ActionError("El color no pertenece a este producto.");
+      }
+    }
     await db.productMedia.update({
       where: { id: data.mediaId },
-      data: { variantId: data.variantId },
+      data: {
+        variantId: data.variantId,
+        attributeValueId: data.attributeValueId,
+      },
     });
     revalidate(media.productId);
     return null;
@@ -189,19 +215,16 @@ const externalVideoSchema = z.object({
   url: z
     .string()
     .url("URL inválida")
-    .refine(
-      (value) => {
-        const host = new URL(value).hostname.toLowerCase();
-        return [
-          "youtube.com",
-          "www.youtube.com",
-          "youtu.be",
-          "vimeo.com",
-          "www.vimeo.com",
-        ].includes(host);
-      },
-      "Solo se admiten URLs de YouTube o Vimeo",
-    ),
+    .refine((value) => {
+      const host = new URL(value).hostname.toLowerCase();
+      return [
+        "youtube.com",
+        "www.youtube.com",
+        "youtu.be",
+        "vimeo.com",
+        "www.vimeo.com",
+      ].includes(host);
+    }, "Solo se admiten URLs de YouTube o Vimeo"),
 });
 
 export async function addExternalVideo(

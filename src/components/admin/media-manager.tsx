@@ -35,7 +35,7 @@ import {
   addProductMedia,
   deleteProductMedia,
   reorderProductMedia,
-  setProductMediaVariant,
+  setProductMediaAssociation,
   setPrimaryMedia,
 } from "@/server/actions/media-actions";
 import type { UploadResult } from "@/server/upload/upload-service";
@@ -49,18 +49,26 @@ export type MediaItem = {
   alt: string | null;
   isPrimary: boolean;
   variantId: string | null;
+  attributeValueId: string | null;
 };
 
 export type MediaVariantOption = { id: string; label: string };
+export type MediaColorOption = {
+  id: string;
+  label: string;
+  hex: string | null;
+};
 
 export function MediaManager({
   productId,
   initialMedia,
   variants,
+  colors,
 }: {
   productId: string;
   initialMedia: MediaItem[];
   variants: MediaVariantOption[];
+  colors: MediaColorOption[];
 }) {
   const [media, setMedia] = useState<MediaItem[]>(initialMedia);
   const [uploading, setUploading] = useState(false);
@@ -78,8 +86,8 @@ export function MediaManager({
   const makePrimary = useAction(setPrimaryMedia, {
     successMessage: "Imagen principal actualizada",
   });
-  const assignVariant = useAction(setProductMediaVariant, {
-    successMessage: "Foto de variante actualizada",
+  const assignMedia = useAction(setProductMediaAssociation, {
+    successMessage: "Foto asociada correctamente",
   });
   const addVideo = useAction(addExternalVideo, {
     successMessage: "Video agregado",
@@ -123,6 +131,7 @@ export function MediaManager({
               alt: null,
               isPrimary: m.length === 0 && json.kind !== "video",
               variantId: null,
+              attributeValueId: null,
             },
           ]);
         } else {
@@ -174,6 +183,7 @@ export function MediaManager({
           alt: null,
           isPrimary: false,
           variantId: null,
+          attributeValueId: null,
         },
       ]);
       setVideoUrl("");
@@ -242,16 +252,21 @@ export function MediaManager({
                   onDelete={() => handleDelete(item.id)}
                   onPrimary={() => handlePrimary(item.id)}
                   variants={variants}
-                  onVariantChange={async (variantId) => {
-                    const result = await assignVariant.run({
+                  colors={colors}
+                  onAssociationChange={async (association) => {
+                    const [kind, id = ""] = association.split(":");
+                    const variantId = kind === "variant" ? id : null;
+                    const attributeValueId = kind === "color" ? id : null;
+                    const result = await assignMedia.run({
                       mediaId: item.id,
-                      variantId: variantId || null,
+                      variantId,
+                      attributeValueId,
                     });
                     if (result.ok) {
                       setMedia((current) =>
                         current.map((entry) =>
                           entry.id === item.id
-                            ? { ...entry, variantId: variantId || null }
+                            ? { ...entry, variantId, attributeValueId }
                             : entry,
                         ),
                       );
@@ -288,13 +303,15 @@ function SortableMedia({
   onDelete,
   onPrimary,
   variants,
-  onVariantChange,
+  colors,
+  onAssociationChange,
 }: {
   item: MediaItem;
   onDelete: () => void;
   onPrimary: () => void;
   variants: MediaVariantOption[];
-  onVariantChange: (variantId: string) => void;
+  colors: MediaColorOption[];
+  onAssociationChange: (association: string) => void;
 }) {
   const {
     attributes,
@@ -367,21 +384,36 @@ function SortableMedia({
           Principal
         </span>
       )}
-      {item.type === "IMAGE" && variants.length > 0 && (
+      {item.type === "IMAGE" && (variants.length > 0 || colors.length > 0) && (
         <div className="border-border bg-surface border-t p-2">
           <label className="text-foreground-muted mb-1 block text-[11px] font-medium">
-            Foto para variante
+            Mostrar esta foto cuando el cliente elija
           </label>
           <select
-            value={item.variantId ?? ""}
-            onChange={(event) => onVariantChange(event.target.value)}
+            value={
+              item.attributeValueId
+                ? `color:${item.attributeValueId}`
+                : item.variantId
+                  ? `variant:${item.variantId}`
+                  : ""
+            }
+            onChange={(event) => onAssociationChange(event.target.value)}
             className="border-border bg-surface h-8 w-full rounded border px-2 text-xs"
             aria-label="Asignar foto a variante"
           >
-            <option value="">General (todas)</option>
+            <option value="">Siempre (foto general)</option>
+            {colors.length > 0 && (
+              <optgroup label="Colores">
+                {colors.map((color) => (
+                  <option key={color.id} value={`color:${color.id}`}>
+                    {color.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
             {variants.map((variant) => (
-              <option key={variant.id} value={variant.id}>
-                {variant.label}
+              <option key={variant.id} value={`variant:${variant.id}`}>
+                Combinación exacta: {variant.label}
               </option>
             ))}
           </select>

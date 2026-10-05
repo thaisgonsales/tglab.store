@@ -40,6 +40,15 @@ function valueSlugs(labels: string[]): string[] {
 export async function createAttribute(input: AttributeInput) {
   return staffAction(async () => {
     const data = attributeInputSchema.parse(input);
+    const duplicate = await db.attribute.findFirst({
+      where: { name: { equals: data.name, mode: "insensitive" } },
+      select: { id: true },
+    });
+    if (duplicate) {
+      throw new ActionError(
+        `Ya existe el atributo "${data.name}". Edítalo y agrega allí todos sus valores.`,
+      );
+    }
     const slug = await uniqueAttributeSlug(data.name);
     const maxPos = await db.attribute.aggregate({ _max: { position: true } });
     const slugs = valueSlugs(data.values.map((v) => v.label));

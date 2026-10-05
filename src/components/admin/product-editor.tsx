@@ -74,6 +74,7 @@ export function ProductEditor({
   categories,
   allAttributes,
   assignedAttributeIds,
+  usedAttributeValueIds,
   variants,
   customFields,
 }: {
@@ -82,6 +83,7 @@ export function ProductEditor({
   categories: { id: string; label: string; depth: number }[];
   allAttributes: AttributeOption[];
   assignedAttributeIds: string[];
+  usedAttributeValueIds: string[];
   variants: VariantRow[];
   customFields: CustomFieldRow[];
 }) {
@@ -381,6 +383,23 @@ export function ProductEditor({
                   .map((option) => `${option.attribute}: ${option.value}`)
                   .join(" · "),
               }))}
+              colors={allAttributes
+                .filter(
+                  (attribute) =>
+                    attribute.type === "COLOR" &&
+                    assignedAttributeIds.includes(attribute.id),
+                )
+                .flatMap((attribute) =>
+                  attribute.values
+                    .map((value) => ({
+                      id: value.id,
+                      label: `${attribute.name}: ${value.label}`,
+                      hex: value.hex || null,
+                    }))
+                    .filter((value) =>
+                      usedAttributeValueIds.includes(value.id),
+                    ),
+                )}
             />
           </CardContent>
         </Card>

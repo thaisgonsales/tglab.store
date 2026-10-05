@@ -418,6 +418,7 @@ export async function duplicateProduct(id: string) {
                 sourceVariantKeyById.get(m.variantId) ?? "",
               ) ?? null)
             : null,
+          attributeValueId: m.attributeValueId,
         },
       });
     }
