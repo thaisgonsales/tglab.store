@@ -64,6 +64,7 @@ export function proxy(request: NextRequest): NextResponse {
     pathname.startsWith("/api/admin/") ||
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/api/media/") ||
+    pathname === "/api/webhooks/mercadopago" ||
     pathname === "/api/health" ||
     isMaintenanceAsset;
 
