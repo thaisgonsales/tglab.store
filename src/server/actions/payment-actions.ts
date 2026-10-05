@@ -8,7 +8,11 @@ import { ActionError, staffAction } from "@/server/auth/action-guard";
 import type { ActionResult } from "@/server/auth/action-guard";
 import { db } from "@/server/db";
 import { canAccessOrder } from "@/server/services/order-access-service";
-import { consumeReservations } from "@/server/services/inventory-service";
+import {
+  consumeReservations,
+  OutOfStockError,
+  reserveStock,
+} from "@/server/services/inventory-service";
 import { MercadoPagoProvider } from "@/server/payments/mercadopago";
 import { applyProviderPayment } from "@/server/payments/payment-service";
 import { getProvider } from "@/server/payments/registry";
@@ -16,7 +20,7 @@ import type { StartPaymentResult } from "@/server/payments/types";
 
 const startSchema = z.object({
   orderNumber: z.string().max(20),
-  method: z.enum(["MERCADOPAGO", "WEBPAY", "FLOW", "BANK_TRANSFER"]),
+  method: z.enum(["MERCADOPAGO", "WEBPAY", "BANK_TRANSFER"]),
 });
 
 /**
@@ -43,13 +47,18 @@ export async function startPayment(
       accountId: true,
       grandTotal: true,
       email: true,
+      status: true,
       paymentStatus: true,
       expiresAt: true,
     },
   });
-  if (!order || !await canAccessOrder(order)) return { ok: false, error: "Pedido no encontrado." };
+  if (!order || !(await canAccessOrder(order)))
+    return { ok: false, error: "Pedido no encontrado." };
   if (order.paymentStatus === "PAID") {
     return { ok: false, error: "Este pedido ya está pagado." };
+  }
+  if (order.status !== "PENDING_PAYMENT") {
+    return { ok: false, error: "Este pedido ya no admite nuevos pagos." };
   }
   if (order.expiresAt && order.expiresAt < new Date()) {
     return {
@@ -82,6 +91,12 @@ export async function startPayment(
       },
       update: { status: result.kind === "redirect" ? "PENDING" : "INITIATED" },
     });
+    if (["REJECTED", "CANCELLED"].includes(order.paymentStatus)) {
+      await db.order.update({
+        where: { id: order.id },
+        data: { paymentStatus: "PENDING" },
+      });
+    }
 
     return { ok: true, data: result };
   } catch (err) {
@@ -106,8 +121,12 @@ export async function syncMercadoPagoReturn(
   const parsed = syncSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos." };
 
-  const accessibleOrder = await db.order.findUnique({ where: { number: parsed.data.orderNumber.toUpperCase().trim() }, select: { id: true, accountId: true } });
-  if (!accessibleOrder || !await canAccessOrder(accessibleOrder)) return { ok: false, error: "Pedido no encontrado." };
+  const accessibleOrder = await db.order.findUnique({
+    where: { number: parsed.data.orderNumber.toUpperCase().trim() },
+    select: { id: true, accountId: true },
+  });
+  if (!accessibleOrder || !(await canAccessOrder(accessibleOrder)))
+    return { ok: false, error: "Pedido no encontrado." };
   const provider = new MercadoPagoProvider();
   if (!provider.isConfigured() || !parsed.data.paymentId) {
     const order = await db.order.findUnique({
@@ -148,9 +167,52 @@ export async function confirmBankTransfer(
     await db.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { number: orderNumber.toUpperCase().trim() },
+        include: {
+          items: {
+            select: {
+              variantId: true,
+              quantity: true,
+              productName: true,
+            },
+          },
+        },
       });
       if (!order) throw new ActionError("Pedido no encontrado.");
       if (order.paymentStatus === "PAID") return;
+      if (order.status !== "PENDING_PAYMENT") {
+        throw new ActionError("Este pedido ya no admite confirmación de pago.");
+      }
+
+      const heldReservations = await tx.stockReservation.count({
+        where: { orderId: order.id, status: "HELD" },
+      });
+      if (heldReservations === 0) {
+        const lines = new Map<
+          string,
+          { variantId: string; quantity: number; productName: string }
+        >();
+        for (const item of order.items) {
+          if (!item.variantId) {
+            throw new ActionError(
+              "No se puede confirmar: una variante del pedido ya no existe.",
+            );
+          }
+          const current = lines.get(item.variantId);
+          lines.set(item.variantId, {
+            variantId: item.variantId,
+            quantity: (current?.quantity ?? 0) + item.quantity,
+            productName: item.productName,
+          });
+        }
+        try {
+          await reserveStock(tx, order.id, [...lines.values()]);
+        } catch (error) {
+          if (!(error instanceof OutOfStockError)) throw error;
+          throw new ActionError(
+            `${error.message} No confirmes el pago hasta resolver el stock.`,
+          );
+        }
+      }
 
       await consumeReservations(tx, order.id);
 

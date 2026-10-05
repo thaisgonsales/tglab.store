@@ -36,6 +36,7 @@ export function proxy(request: NextRequest): NextResponse {
     "font-src 'self' data:",
     `img-src 'self' data: blob: ${origins} https://www.google-analytics.com https://www.facebook.com`.trim(),
     `media-src 'self' blob: ${origins}`.trim(),
+    "frame-src 'self' https://www.youtube.com https://player.vimeo.com",
     `connect-src 'self' ${origins} https://www.google-analytics.com https://region1.google-analytics.com https://www.facebook.com`.trim(),
     "form-action 'self' https://webpay3g.transbank.cl https://webpay3gint.transbank.cl",
     "upgrade-insecure-requests",

@@ -18,7 +18,7 @@ const serverEnvSchema = z.object({
 
   BETTER_AUTH_SECRET: z
     .string()
-    .min(16, "BETTER_AUTH_SECRET debe tener al menos 16 caracteres"),
+    .min(32, "BETTER_AUTH_SECRET debe tener al menos 32 caracteres"),
   BETTER_AUTH_URL: z.string().url().default("http://localhost:3000"),
 
   // Almacenamiento

@@ -77,11 +77,11 @@ export const customerAuth = betterAuth({
     },
   },
   rateLimit: {
-    enabled: true,
+    enabled: env.APP_ENV !== "test",
     storage: "database",
     modelName: "authRateLimit",
     window: 60,
-    max: 60,
+    max: 30,
   },
   advanced: {
     cookiePrefix: "tglab_customer",

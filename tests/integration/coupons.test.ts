@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { slugify } from "@/lib/slug";
 import { db } from "@/server/db";
-import { evaluateCoupon } from "@/server/services/coupon-service";
+import {
+  evaluateCoupon,
+  releaseCouponUse,
+} from "@/server/services/coupon-service";
 
 const created: { coupons: string[]; products: string[]; categories: string[] } =
   { coupons: [], products: [], categories: [] };
@@ -138,6 +141,44 @@ describe("evaluateCoupon", () => {
     });
     expect(ok.valid).toBe(true);
     await db.couponUse.deleteMany({ where: { couponId: c.id } });
+    await db.order.delete({ where: { id: order.id } });
+  });
+
+  it("libera de forma idempotente el cupón de un pedido no pagado", async () => {
+    const c = await coupon({
+      code: "RELEASE",
+      type: "PERCENT",
+      value: 10,
+      isActive: true,
+      usedCount: 1,
+    });
+    const order = await db.order.create({
+      data: {
+        number: `TST-${Date.now()}${Math.floor(Math.random() * 999)}`,
+        email: "release@example.com",
+        phone: "1",
+        firstName: "R",
+        lastName: "L",
+        subtotal: 1_000,
+        grandTotal: 900,
+      },
+    });
+    await db.couponUse.create({
+      data: {
+        couponId: c.id,
+        orderId: order.id,
+        customerEmail: order.email,
+        amountDiscounted: 100,
+      },
+    });
+
+    await db.$transaction((tx) => releaseCouponUse(tx, order.id));
+    await db.$transaction((tx) => releaseCouponUse(tx, order.id));
+
+    expect(
+      (await db.coupon.findUniqueOrThrow({ where: { id: c.id } })).usedCount,
+    ).toBe(0);
+    expect(await db.couponUse.count({ where: { orderId: order.id } })).toBe(0);
     await db.order.delete({ where: { id: order.id } });
   });
 

@@ -83,8 +83,9 @@ export function CustomFieldsSection({
                   }
                 >
                   {Object.entries(TYPE_LABEL).map(([v, l]) => (
-                    <option key={v} value={v}>
+                    <option key={v} value={v} disabled={v === "FILE"}>
                       {l}
+                      {v === "FILE" ? " (no disponible)" : ""}
                     </option>
                   ))}
                 </Select>

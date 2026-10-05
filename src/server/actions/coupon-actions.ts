@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
+import type { z } from "zod";
 
 import { couponInputSchema } from "@/lib/schemas/coupon";
 import { ActionError, staffAction } from "@/server/auth/action-guard";

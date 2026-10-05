@@ -6,7 +6,8 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
 import {
   consumeReservations,
-  releaseReservations,
+  OutOfStockError,
+  reserveStock,
 } from "@/server/services/inventory-service";
 import type { PaymentProviderKey } from "@/server/payments/types";
 
@@ -28,7 +29,8 @@ export type ProviderPaymentResult = {
  * - Valida el monto: `amountPaid` debe cubrir `order.grandTotal` (nunca se
  *   confía en el monto que envía el proveedor sin compararlo con la BD).
  * - Pago aprobado -> marca PAID y CONSUME las reservas (baja el stock).
- * - Pago rechazado/cancelado -> libera las reservas.
+ * - Pago rechazado/cancelado -> conserva la reserva hasta el vencimiento para
+ *   permitir un nuevo intento sin perder la protección contra sobreventa.
  *
  * Devuelve el estado final del pedido.
  */
@@ -43,6 +45,15 @@ export async function applyProviderPayment(
   const outcome = await db.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { number: result.orderNumber.toUpperCase().trim() },
+      include: {
+        items: {
+          select: {
+            variantId: true,
+            quantity: true,
+            productName: true,
+          },
+        },
+      },
     });
     if (!order) {
       return {
@@ -58,6 +69,8 @@ export async function applyProviderPayment(
       orderId: order.id,
     };
 
+    const rawPayload = result.raw as Prisma.InputJsonValue;
+
     // Idempotencia: ¿ya registramos este pago del proveedor?
     const existingPayment = await tx.payment.findUnique({
       where: {
@@ -67,6 +80,29 @@ export async function applyProviderPayment(
         },
       },
     });
+    if (result.status === "REFUNDED") {
+      if (existingPayment?.status !== "REFUNDED") {
+        await upsertPayment(tx, order.id, result, "REFUNDED", rawPayload);
+        const warning = `Mercado Pago informó reembolso o contracargo (${result.providerReference}). Revisión manual obligatoria; no se repuso stock ni se cambió el pedido automáticamente.`;
+        await tx.order.update({
+          where: { id: order.id },
+          data: {
+            internalNotes: [order.internalNotes, warning]
+              .filter(Boolean)
+              .join("\n"),
+          },
+        });
+        await tx.orderStatusHistory.create({
+          data: {
+            orderId: order.id,
+            fromStatus: order.status,
+            toStatus: order.status,
+            note: warning,
+          },
+        });
+      }
+      return { ...base, orderPaymentStatus: order.paymentStatus };
+    }
     if (existingPayment && existingPayment.status === "PAID") {
       return { ...base, orderPaymentStatus: order.paymentStatus };
     }
@@ -74,32 +110,75 @@ export async function applyProviderPayment(
       return { ...base, orderPaymentStatus: "PAID" };
     }
 
-    const rawPayload = result.raw as Prisma.InputJsonValue;
-
     if (result.status === "PAID") {
       // Protección contra manipulación del monto.
-      if (
-        result.amountPaid !== null &&
-        result.amountPaid + 1 < order.grandTotal
-      ) {
+      if (result.amountPaid === null || result.amountPaid < order.grandTotal) {
         await upsertPayment(tx, order.id, result, "REJECTED", rawPayload);
         await tx.orderStatusHistory.create({
           data: {
             orderId: order.id,
             toStatus: order.status,
-            note: `Pago rechazado: monto ${result.amountPaid} < total ${order.grandTotal}.`,
+            note:
+              result.amountPaid === null
+                ? "Pago rechazado: el proveedor no informó un monto verificable."
+                : `Pago rechazado: monto ${result.amountPaid} < total ${order.grandTotal}.`,
           },
         });
         return { ...base, orderPaymentStatus: order.paymentStatus };
       }
 
-      await consumeReservations(tx, order.id);
+      const heldReservations = await tx.stockReservation.count({
+        where: { orderId: order.id, status: "HELD" },
+      });
+      let stockWarning: string | null = null;
+
+      // Mercado Pago puede confirmar después de que venció la reserva. En ese
+      // caso intentamos reservar nuevamente de forma atómica antes de consumir.
+      // Si ya no queda stock, el dinero igualmente fue cobrado: nunca ocultamos
+      // ese hecho ni reembolsamos automáticamente; dejamos una alerta crítica
+      // para resolución manual desde el panel.
+      if (heldReservations === 0) {
+        const lines = new Map<
+          string,
+          { variantId: string; quantity: number; productName: string }
+        >();
+        for (const item of order.items) {
+          if (!item.variantId) {
+            stockWarning =
+              "PAGO APROBADO SIN RESERVA: una variante del pedido ya no existe. Revisión manual obligatoria.";
+            break;
+          }
+          const current = lines.get(item.variantId);
+          lines.set(item.variantId, {
+            variantId: item.variantId,
+            quantity: (current?.quantity ?? 0) + item.quantity,
+            productName: item.productName,
+          });
+        }
+        if (!stockWarning) {
+          try {
+            await reserveStock(tx, order.id, [...lines.values()]);
+          } catch (error) {
+            if (!(error instanceof OutOfStockError)) throw error;
+            stockWarning = `PAGO APROBADO SIN STOCK: ${error.message} El cobro existe y requiere resolución manual; no se realizó reembolso automático.`;
+          }
+        }
+      }
+
+      if (!stockWarning) await consumeReservations(tx, order.id);
       await tx.order.update({
         where: { id: order.id },
         data: {
           paymentStatus: "PAID",
           status: order.status === "PENDING_PAYMENT" ? "PAID" : order.status,
           paidAt: new Date(),
+          ...(stockWarning
+            ? {
+                internalNotes: [order.internalNotes, stockWarning]
+                  .filter(Boolean)
+                  .join("\n"),
+              }
+            : {}),
         },
       });
       await upsertPayment(tx, order.id, result, "PAID", rawPayload);
@@ -108,7 +187,9 @@ export async function applyProviderPayment(
           orderId: order.id,
           fromStatus: order.status,
           toStatus: "PAID",
-          note: `Pago aprobado (${result.provider} ${result.providerReference}).`,
+          note: stockWarning
+            ? `${stockWarning} (${result.provider} ${result.providerReference}).`
+            : `Pago aprobado (${result.provider} ${result.providerReference}).`,
         },
       });
       // El modelo de emisión declarado por TG LAB usa el comprobante del
@@ -119,7 +200,6 @@ export async function applyProviderPayment(
     }
 
     if (result.status === "REJECTED" || result.status === "CANCELLED") {
-      await releaseReservations(tx, order.id, `Pago ${result.status}`);
       await tx.order.update({
         where: { id: order.id },
         data: {

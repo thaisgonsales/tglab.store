@@ -19,6 +19,15 @@ export type CouponEvaluation =
       freeShipping: boolean;
     };
 
+export class CouponLimitReachedError extends Error {
+  constructor() {
+    super(
+      "El cupón alcanzó su límite de usos mientras procesábamos tu pedido.",
+    );
+    this.name = "CouponLimitReachedError";
+  }
+}
+
 /**
  * Valida un cupón contra el carrito y devuelve el descuento aplicable.
  * Reglas: vigencia, compra mínima, usos totales, usos por cliente, y
@@ -129,16 +138,76 @@ export async function recordCouponUse(
     amountDiscounted: number;
   },
 ) {
+  const normalizedEmail = input.customerEmail.toLowerCase();
+  // Serializa únicamente los intentos del mismo cupón+cliente para que el
+  // límite individual tampoco pueda saltarse con dos checkouts simultáneos.
+  await tx.$executeRaw`
+    SELECT pg_advisory_xact_lock(
+      hashtext(${`${input.couponId}:${normalizedEmail}`})
+    )
+  `;
+  const coupon = await tx.coupon.findUniqueOrThrow({
+    where: { id: input.couponId },
+    select: { maxUsesPerCustomer: true },
+  });
+  if (coupon.maxUsesPerCustomer !== null) {
+    const customerUses = await tx.couponUse.count({
+      where: {
+        couponId: input.couponId,
+        customerEmail: normalizedEmail,
+      },
+    });
+    if (customerUses >= coupon.maxUsesPerCustomer) {
+      throw new CouponLimitReachedError();
+    }
+  }
+
   await tx.couponUse.create({
     data: {
       couponId: input.couponId,
       orderId: input.orderId,
-      customerEmail: input.customerEmail.toLowerCase(),
+      customerEmail: normalizedEmail,
       amountDiscounted: input.amountDiscounted,
     },
   });
-  await tx.coupon.update({
-    where: { id: input.couponId },
-    data: { usedCount: { increment: 1 } },
+  // La evaluación previa mejora el mensaje, pero no basta bajo concurrencia:
+  // dos checkouts podrían ver el último uso disponible a la vez. Este UPDATE
+  // condicional convierte el límite total en una garantía atómica de la BD.
+  const affected = await tx.$executeRaw`
+    UPDATE "coupon"
+    SET "usedCount" = "usedCount" + 1
+    WHERE "id" = ${input.couponId}
+      AND ("maxUses" IS NULL OR "usedCount" < "maxUses")
+  `;
+  if (affected === 0) throw new CouponLimitReachedError();
+}
+
+/**
+ * Libera la reserva de uso de cupón de un pedido que no llegó a pagarse.
+ * Es idempotente: una segunda llamada no vuelve a descontar `usedCount`.
+ */
+export async function releaseCouponUse(
+  tx: Prisma.TransactionClient,
+  orderId: string,
+): Promise<void> {
+  const uses = await tx.couponUse.findMany({
+    where: { orderId },
+    select: { id: true, couponId: true },
   });
+  if (uses.length === 0) return;
+
+  await tx.couponUse.deleteMany({
+    where: { id: { in: uses.map((u) => u.id) } },
+  });
+  const counts = new Map<string, number>();
+  for (const use of uses) {
+    counts.set(use.couponId, (counts.get(use.couponId) ?? 0) + 1);
+  }
+  for (const [couponId, count] of counts) {
+    await tx.$executeRaw`
+      UPDATE "coupon"
+      SET "usedCount" = GREATEST(0, "usedCount" - ${count})
+      WHERE "id" = ${couponId}
+    `;
+  }
 }

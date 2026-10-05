@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getStaffSession } from "@/server/auth/session";
+import { getEnv } from "@/lib/env";
 import {
   handleUpload,
   UploadValidationError,
@@ -22,6 +23,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
+  const env = getEnv();
+  const absoluteMax = Math.max(
+    env.UPLOAD_MAX_IMAGE_BYTES,
+    env.UPLOAD_MAX_VIDEO_BYTES,
+  );
+  const declaredLength = Number(req.headers.get("content-length") ?? 0);
+  if (
+    Number.isFinite(declaredLength) &&
+    declaredLength > 0 &&
+    declaredLength > absoluteMax + 1_000_000
+  ) {
+    return NextResponse.json(
+      { error: "El archivo supera el tamaño máximo permitido." },
+      { status: 413 },
+    );
+  }
+
   let form: FormData;
   try {
     form = await req.formData();
@@ -35,6 +53,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Falta el archivo" }, { status: 400 });
+  }
+  if (file.size > absoluteMax) {
+    return NextResponse.json(
+      { error: "El archivo supera el tamaño máximo permitido." },
+      { status: 413 },
+    );
   }
   if (!ALLOWED_FOLDERS.has(folder)) {
     return NextResponse.json({ error: "Destino inválido" }, { status: 400 });

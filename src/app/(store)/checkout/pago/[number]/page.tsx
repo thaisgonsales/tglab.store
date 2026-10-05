@@ -27,14 +27,20 @@ export default async function PaymentPage({
   const { number } = await params;
   const sp = await searchParams;
   const order = await getOrderByNumber(number);
-  if (!order || !await canAccessOrder(order)) notFound();
+  if (!order || !(await canAccessOrder(order))) notFound();
 
   const fromMercadoPago = sp.mp === "1";
 
   const [commerce] = await Promise.all([getSettingsGroup("commerce")]);
-  const methods = availablePaymentMethods();
   const bank = commerce.bankTransferDetails;
+  const bankReady = Boolean(bank.accountNumber && bank.bank);
+  const methods = availablePaymentMethods().filter(
+    (method) => method.key !== "BANK_TRANSFER" || bankReady,
+  );
   const expired = order.expiresAt ? order.expiresAt < new Date() : false;
+  const closed = ["CANCELLED", "REFUNDED", "EXPIRED"].includes(
+    order.paymentStatus,
+  );
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
@@ -95,10 +101,10 @@ export default async function PaymentPage({
               </Link>
             </div>
           </div>
-        ) : expired ? (
+        ) : expired || closed ? (
           <div className="mt-6 rounded-md bg-amber-50 p-4 text-sm text-amber-800">
-            La reserva de stock de este pedido venció. Vuelve a armar tu carrito
-            para comprar estos productos.
+            Este pedido ya no admite pagos. Si necesitas ayuda, contáctanos por
+            nuestros canales de atención.
           </div>
         ) : (
           <div className="mt-6">

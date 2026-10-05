@@ -31,8 +31,9 @@ export async function GET(
   const { path: segments } = await ctx.params;
   const rel = segments.join("/");
   const full = path.normalize(path.join(UPLOAD_ROOT, rel));
+  const relative = path.relative(UPLOAD_ROOT, full);
 
-  if (!full.startsWith(UPLOAD_ROOT)) {
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
     return new NextResponse("Not found", { status: 404 });
   }
 

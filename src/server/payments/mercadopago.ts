@@ -27,7 +27,11 @@ export class MercadoPagoProvider implements PaymentProvider {
 
   isConfigured(): boolean {
     const env = getEnv();
-    return Boolean(env.MERCADOPAGO_ACCESS_TOKEN && env.MERCADOPAGO_PUBLIC_KEY);
+    return Boolean(
+      env.MERCADOPAGO_ACCESS_TOKEN &&
+        env.MERCADOPAGO_PUBLIC_KEY &&
+        env.MERCADOPAGO_WEBHOOK_SECRET,
+    );
   }
 
   private config(): MercadoPagoConfig {
@@ -148,19 +152,17 @@ export class MercadoPagoProvider implements PaymentProvider {
     const paymentId = body.data?.id ?? dataId ?? "";
     if (!type.includes("payment") || !paymentId) return null;
 
-    if (env.MERCADOPAGO_WEBHOOK_SECRET) {
-      try {
-        WebhookSignatureValidator.validate({
-          xSignature: req.headers.get("x-signature"),
-          xRequestId: req.headers.get("x-request-id"),
-          dataId,
-          secret: env.MERCADOPAGO_WEBHOOK_SECRET,
-          toleranceSeconds: 300,
-        });
-      } catch (err) {
-        console.warn("[mercadopago] firma de webhook inválida", err);
-        return null;
-      }
+    try {
+      WebhookSignatureValidator.validate({
+        xSignature: req.headers.get("x-signature"),
+        xRequestId: req.headers.get("x-request-id"),
+        dataId,
+        secret: env.MERCADOPAGO_WEBHOOK_SECRET,
+        toleranceSeconds: 300,
+      });
+    } catch (err) {
+      console.warn("[mercadopago] firma de webhook inválida", err);
+      return null;
     }
 
     return { paymentId: String(paymentId) };

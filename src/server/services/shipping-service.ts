@@ -133,8 +133,11 @@ export const getFulfillmentConfig = cache(async () => {
     const zonesCount = await db.shippingZone.count({
       where: { isActive: true },
     });
-    return { hasShipping: zonesCount > 0 };
+    return {
+      hasShipping:
+        zonesCount > 0 || new ChilexpressProvider().isConfigured(),
+    };
   } catch {
-    return { hasShipping: false };
+    return { hasShipping: new ChilexpressProvider().isConfigured() };
   }
 });

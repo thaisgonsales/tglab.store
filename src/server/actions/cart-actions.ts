@@ -71,6 +71,28 @@ export async function addToCart(
           `"${field.label}" supera el máximo de ${field.maxLength} caracteres.`,
         );
       }
+      if (
+        field.type === "SELECT" &&
+        value !== "" &&
+        (!Array.isArray(field.options) || !field.options.includes(value))
+      ) {
+        throw new ActionError(`La opción de "${field.label}" no es válida.`);
+      }
+      if (
+        field.type === "NUMBER" &&
+        value !== "" &&
+        !Number.isFinite(Number(value))
+      ) {
+        throw new ActionError(`"${field.label}" debe ser un número válido.`);
+      }
+      if (field.type === "CHECKBOX" && value !== "" && value !== "sí") {
+        throw new ActionError(`El valor de "${field.label}" no es válido.`);
+      }
+      if (field.type === "FILE") {
+        throw new ActionError(
+          `La carga de archivos en "${field.label}" no está disponible. Envíanos una solicitud personalizada.`,
+        );
+      }
     }
     const customizations = variant.product.customFields
       .map((f) => ({
@@ -83,28 +105,35 @@ export async function addToCart(
     const cart = await getOrCreateCart();
 
     // Mismo variante + mismas personalizaciones = misma línea (suma cantidad).
-    const existing = await db.cartItem.findFirst({
+    const existingLines = await db.cartItem.findMany({
       where: { cartId: cart.id, variantId: data.variantId },
     });
-    const sameCustom =
+    const existing = existingLines.find(
+      (line) =>
+        JSON.stringify(line.customizations ?? []) ===
+        JSON.stringify(customizations),
+    );
+    const sameCustom = Boolean(
       existing &&
       JSON.stringify(existing.customizations ?? []) ===
-        JSON.stringify(customizations);
+        JSON.stringify(customizations),
+    );
 
     const targetQty = sameCustom
-      ? existing.quantity + data.quantity
+      ? existing!.quantity + data.quantity
       : data.quantity;
-    if (targetQty > variant.stock) {
+    const freeStock = Math.max(0, variant.stock - variant.reservedStock);
+    if (targetQty > freeStock) {
       throw new ActionError(
-        variant.stock === 0
+        freeStock === 0
           ? "Sin stock disponible."
-          : `Solo quedan ${variant.stock} unidades.`,
+          : `Solo quedan ${freeStock} unidades.`,
       );
     }
 
     if (sameCustom) {
       await db.cartItem.update({
-        where: { id: existing.id },
+        where: { id: existing!.id },
         data: { quantity: targetQty },
       });
     } else {
@@ -139,15 +168,19 @@ export async function updateCartLine(
 
     const line = await db.cartItem.findFirst({
       where: { id: lineId, cart: { token } },
-      include: { variant: { select: { stock: true } } },
+      include: { variant: { select: { stock: true, reservedStock: true } } },
     });
     if (!line) throw new ActionError("Esa línea ya no está en el carrito.");
 
     if (quantity === 0) {
       await db.cartItem.delete({ where: { id: lineId } });
     } else {
-      if (quantity > line.variant.stock) {
-        throw new ActionError(`Solo quedan ${line.variant.stock} unidades.`);
+      const freeStock = Math.max(
+        0,
+        line.variant.stock - line.variant.reservedStock,
+      );
+      if (quantity > freeStock) {
+        throw new ActionError(`Solo quedan ${freeStock} unidades.`);
       }
       await db.cartItem.update({ where: { id: lineId }, data: { quantity } });
     }

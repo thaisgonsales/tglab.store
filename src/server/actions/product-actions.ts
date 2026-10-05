@@ -148,6 +148,14 @@ export async function updateProduct(id: string, input: ProductUpdateInput) {
         "El precio anterior debe ser mayor que el precio actual.",
       );
     }
+    if (
+      product.type === "SIMPLE" &&
+      data.stock < defaultVariant.reservedStock
+    ) {
+      throw new ActionError(
+        `No puedes dejar el stock bajo ${defaultVariant.reservedStock}: hay unidades reservadas en pedidos pendientes.`,
+      );
+    }
 
     const categoryRows = await db.category.findMany({
       where: { id: { in: data.categoryIds } },
@@ -226,10 +234,18 @@ export async function updateProduct(id: string, input: ProductUpdateInput) {
           },
         });
         if (data.stock !== defaultVariant.stock) {
-          await tx.productVariant.update({
-            where: { id: defaultVariant.id },
+          const updated = await tx.productVariant.updateMany({
+            where: {
+              id: defaultVariant.id,
+              reservedStock: { lte: data.stock },
+            },
             data: { stock: data.stock },
           });
+          if (updated.count !== 1) {
+            throw new ActionError(
+              "El stock cambió mientras guardabas. Recarga y vuelve a intentarlo.",
+            );
+          }
           await recordMovement(tx, {
             variantId: defaultVariant.id,
             type: data.stock > defaultVariant.stock ? "RESTOCK" : "ADJUSTMENT",
@@ -370,6 +386,17 @@ export async function duplicateProduct(id: string) {
       },
     });
 
+    const copiedVariants = await db.productVariant.findMany({
+      where: { productId: copy.id },
+      select: { id: true, optionsKey: true },
+    });
+    const copiedVariantByKey = new Map(
+      copiedVariants.map((variant) => [variant.optionsKey, variant.id]),
+    );
+    const sourceVariantKeyById = new Map(
+      source.variants.map((variant) => [variant.id, variant.optionsKey]),
+    );
+
     // Copia de media (comparte los mismos archivos; no duplica en storage)
     for (const m of source.media) {
       await db.productMedia.create({
@@ -386,6 +413,11 @@ export async function duplicateProduct(id: string) {
           blurDataUrl: m.blurDataUrl,
           position: m.position,
           isPrimary: m.isPrimary,
+          variantId: m.variantId
+            ? (copiedVariantByKey.get(
+                sourceVariantKeyById.get(m.variantId) ?? "",
+              ) ?? null)
+            : null,
         },
       });
     }
@@ -427,10 +459,30 @@ export async function deleteProduct(id: string) {
 
     const media = await db.productMedia.findMany({
       where: { productId: id },
-      select: { storageKey: true },
+      select: { id: true, url: true, storageKey: true },
     });
-    await db.product.delete({ where: { id } });
-    for (const m of media) await deleteStored(m.storageKey);
+    const keysToDelete: string[] = [];
+    await db.$transaction(async (tx) => {
+      for (const item of media) {
+        if (!item.storageKey) continue;
+        const shared = await tx.productMedia.findFirst({
+          where: { productId: { not: id }, url: item.url },
+          select: { id: true, storageKey: true },
+        });
+        if (shared) {
+          if (!shared.storageKey) {
+            await tx.productMedia.update({
+              where: { id: shared.id },
+              data: { storageKey: item.storageKey },
+            });
+          }
+        } else {
+          keysToDelete.push(item.storageKey);
+        }
+      }
+      await tx.product.delete({ where: { id } });
+    });
+    for (const storageKey of keysToDelete) await deleteStored(storageKey);
 
     revalidateProduct();
     return { deleted: true, archived: false };

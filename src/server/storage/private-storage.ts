@@ -20,7 +20,10 @@ function safeLocalPath(key: string): string {
     .replace(/^(\.\.(\/|\\|$))+/, "")
     .replace(/^[/\\]+/, "");
   const full = path.join(PRIVATE_ROOT, normalized);
-  if (!full.startsWith(PRIVATE_ROOT)) throw new Error("Ruta privada inválida");
+  const relative = path.relative(PRIVATE_ROOT, full);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error("Ruta privada inválida");
+  }
   return full;
 }
 

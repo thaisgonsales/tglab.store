@@ -23,19 +23,31 @@ export default async function CheckoutPage() {
     getSettingsGroup("account"),
   ]);
   const cartToken = await getCartToken();
-  const quote = cartToken
-    ? await quoteCart({ cartToken, fulfillmentMethod: "SHIPPING" })
-    : null;
-
-  if (!quote || quote.isEmpty) {
-    redirect("/carrito");
-  }
-
   const [commerce, contact, fulfillment] = await Promise.all([
     getSettingsGroup("commerce"),
     getSettingsGroup("contact"),
     getFulfillmentConfig(),
   ]);
+  const initialMethod = fulfillment.hasShipping
+    ? "SHIPPING"
+    : commerce.pickupEnabled
+      ? "PICKUP"
+      : "SHIPPING";
+  let quote = cartToken
+    ? await quoteCart({ cartToken, fulfillmentMethod: initialMethod })
+    : null;
+  if (quote?.isEmpty && cartToken) {
+    const alternative =
+      initialMethod === "SHIPPING" && commerce.pickupEnabled
+        ? "PICKUP"
+        : initialMethod === "PICKUP" && fulfillment.hasShipping
+          ? "SHIPPING"
+          : null;
+    if (alternative) {
+      quote = await quoteCart({ cartToken, fulfillmentMethod: alternative });
+    }
+  }
+  if (!quote || quote.isEmpty) redirect("/carrito");
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">

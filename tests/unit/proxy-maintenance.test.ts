@@ -36,4 +36,17 @@ describe("modo mantenimiento", () => {
     expect(health.status).toBe(200);
     expect(health.headers.get("x-middleware-rewrite")).toBeNull();
   });
+
+  it("mantiene disponible el webhook de Mercado Pago", () => {
+    process.env.STORE_MAINTENANCE_MODE = "true";
+
+    const webhook = proxy(
+      new NextRequest("https://tglab.cl/api/webhooks/mercadopago", {
+        method: "POST",
+      }),
+    );
+
+    expect(webhook.status).toBe(200);
+    expect(webhook.headers.get("x-middleware-rewrite")).toBeNull();
+  });
 });

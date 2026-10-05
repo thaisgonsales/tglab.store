@@ -157,7 +157,7 @@ export default async function ProductPage({
     description: product.shortDescription ?? undefined,
     image: product.media
       .filter((m) => m.type === "IMAGE")
-      .map((m) => `${publicEnv.siteUrl}${m.url}`),
+      .map((m) => new URL(m.url, publicEnv.siteUrl).toString()),
     sku: product.sku ?? undefined,
     offers: {
       "@type": "Offer",

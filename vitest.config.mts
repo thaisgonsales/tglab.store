@@ -1,9 +1,9 @@
 import react from "@vitejs/plugin-react";
-import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  plugins: [tsconfigPaths(), react()],
+  plugins: [react()],
+  resolve: { tsconfigPaths: true },
   test: {
     // Por defecto Node (lógica de dominio). Los tests de componentes usan
     // `// @vitest-environment jsdom` en su cabecera.

@@ -18,7 +18,10 @@ import {
   releaseExpiredReservations,
   reserveStock,
 } from "@/server/services/inventory-service";
-import { recordCouponUse } from "@/server/services/coupon-service";
+import {
+  CouponLimitReachedError,
+  recordCouponUse,
+} from "@/server/services/coupon-service";
 import { nextOrderNumber } from "@/server/services/order-service";
 import { quoteCart } from "@/server/services/pricing-service";
 
@@ -279,6 +282,9 @@ export async function createOrder(
     };
   } catch (err) {
     if (err instanceof OutOfStockError) {
+      return { ok: false, error: err.message };
+    }
+    if (err instanceof CouponLimitReachedError) {
       return { ok: false, error: err.message };
     }
     if (err instanceof ActionError) {

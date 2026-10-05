@@ -3,6 +3,7 @@ import "server-only";
 import { STOCK_RESERVATION_TTL_MINUTES } from "@/config/constants";
 import type { InventoryMovementType, Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
+import { releaseCouponUse } from "@/server/services/coupon-service";
 
 type Tx = Prisma.TransactionClient;
 
@@ -58,10 +59,13 @@ export async function setStock(
   return db.$transaction(async (tx) => {
     const variant = await tx.productVariant.findUnique({
       where: { id: variantId },
-      select: { stock: true },
+      select: { stock: true, reservedStock: true },
     });
     if (!variant) throw new Error(`Variante ${variantId} no encontrada`);
     if (variant.stock === newStock) return false;
+    if (newStock < variant.reservedStock) {
+      throw new Error("STOCK_BELOW_RESERVED");
+    }
 
     await tx.productVariant.update({
       where: { id: variantId },
@@ -250,6 +254,7 @@ export async function releaseExpiredReservations(): Promise<number> {
         orderId,
         "Vencimiento de la ventana de pago",
       );
+      await releaseCouponUse(tx, orderId);
       if (order.paymentStatus === "PENDING") {
         await tx.order.update({
           where: { id: orderId },

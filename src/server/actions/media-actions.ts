@@ -190,7 +190,16 @@ const externalVideoSchema = z.object({
     .string()
     .url("URL inválida")
     .refine(
-      (u) => /youtube\.com|youtu\.be|vimeo\.com/.test(u),
+      (value) => {
+        const host = new URL(value).hostname.toLowerCase();
+        return [
+          "youtube.com",
+          "www.youtube.com",
+          "youtu.be",
+          "vimeo.com",
+          "www.vimeo.com",
+        ].includes(host);
+      },
       "Solo se admiten URLs de YouTube o Vimeo",
     ),
 });

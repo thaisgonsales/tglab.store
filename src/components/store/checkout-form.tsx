@@ -97,7 +97,7 @@ export function CheckoutForm({
   } = useForm<z.input<typeof checkoutFormSchema>, unknown, CheckoutFormValues>({
     resolver: zodResolver(checkoutFormSchema),
     defaultValues: {
-      fulfillmentMethod: pickup.enabled ? "PICKUP" : "SHIPPING",
+      fulfillmentMethod: initialQuote.fulfillmentMethod,
       shippingDeliveryType: "HOME",
       createAccount: false,
       acceptedTerms: false,

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { nanoid } from "nanoid";
 
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { getEnv } from "@/lib/env";
 import { putPrivateObject } from "@/server/storage/private-storage";
 import { processImage } from "@/server/upload/process-image";
 import { createPrivateUploadToken } from "@/server/upload/private-upload-token";
@@ -29,6 +30,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  const maxImageBytes = getEnv().UPLOAD_MAX_IMAGE_BYTES;
+  const declaredLength = Number(req.headers.get("content-length") ?? 0);
+  if (
+    Number.isFinite(declaredLength) &&
+    declaredLength > 0 &&
+    declaredLength > maxImageBytes + 1_000_000
+  ) {
+    return NextResponse.json(
+      { error: "El archivo supera el tamaño máximo permitido." },
+      { status: 413 },
+    );
+  }
+
   let form: FormData;
   try {
     form = await req.formData();
@@ -39,6 +53,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const file = form.get("file");
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Falta el archivo" }, { status: 400 });
+  }
+  if (file.size > maxImageBytes) {
+    return NextResponse.json(
+      { error: "El archivo supera el tamaño máximo permitido." },
+      { status: 413 },
+    );
   }
 
   try {

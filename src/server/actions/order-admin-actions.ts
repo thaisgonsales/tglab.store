@@ -16,13 +16,17 @@ import {
   releaseReservations,
 } from "@/server/services/inventory-service";
 import { sendOrderStatusEmail } from "@/server/email/order-emails";
+import { releaseCouponUse } from "@/server/services/coupon-service";
 
 const STATUS_FLOW: Record<OrderStatus, OrderStatus[]> = {
-  PENDING_PAYMENT: ["PAID", "CANCELLED"],
-  PAID: ["PREPARING", "CANCELLED"],
-  PREPARING: ["READY_FOR_PICKUP", "SHIPPED", "CANCELLED"],
-  READY_FOR_PICKUP: ["DELIVERED", "CANCELLED"],
-  SHIPPED: ["DELIVERED", "CANCELLED"],
+  // PAID solo puede alcanzarse desde los flujos de pago, que también consumen
+  // el stock. CANCELLED solo puede alcanzarse mediante cancelOrder, que exige
+  // solicitud aprobada, confirmación de dueña y motivo.
+  PENDING_PAYMENT: [],
+  PAID: ["PREPARING"],
+  PREPARING: ["READY_FOR_PICKUP", "SHIPPED"],
+  READY_FOR_PICKUP: ["DELIVERED"],
+  SHIPPED: ["DELIVERED"],
   DELIVERED: [],
   CANCELLED: [],
 };
@@ -138,6 +142,7 @@ export async function cancelOrder(input: z.infer<typeof cancelSchema>) {
     await db.$transaction(async (tx) => {
       if (!wasPaid) {
         await releaseReservations(tx, orderId, `Cancelado: ${reason}`);
+        await releaseCouponUse(tx, orderId);
       }
       await tx.order.update({
         where: { id: orderId },
@@ -266,7 +271,9 @@ export async function markOrderRefunded(input: z.input<typeof refundSchema>) {
       );
     }
     const originalPayment = order.payments.find(
-      (payment) => payment.status === "PAID" && (payment.amountPaid ?? 0) > 0,
+      (payment) =>
+        (payment.status === "PAID" || payment.status === "REFUNDED") &&
+        (payment.amountPaid ?? 0) > 0,
     );
     if (!originalPayment) {
       throw new ActionError("No se encontró el pago original confirmado.");

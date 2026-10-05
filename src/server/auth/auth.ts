@@ -78,11 +78,11 @@ export const auth = betterAuth({
     cookieCache: { enabled: false },
   },
   rateLimit: {
-    enabled: true,
+    enabled: env.APP_ENV !== "test",
     storage: "database",
     modelName: "authRateLimit",
     window: 60,
-    max: 60,
+    max: 20,
   },
   databaseHooks: {
     session: {

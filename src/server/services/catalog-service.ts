@@ -184,9 +184,13 @@ export async function searchCatalog(params: CatalogParams) {
   }
   if (params.inStock) variantWhere.stock = { gt: 0 };
   if (params.onlyOffers) {
-    // compareAtPrice > price
     and.push({
-      variants: { some: { isActive: true, compareAtPrice: { not: null } } },
+      variants: {
+        some: {
+          isActive: true,
+          compareAtPrice: { gt: db.productVariant.fields.price },
+        },
+      },
     });
   }
   if (params.attributeValueSlugs && params.attributeValueSlugs.length > 0) {
@@ -214,39 +218,90 @@ export async function searchCatalog(params: CatalogParams) {
   else if (params.sort === "recomendados")
     orderBy = [{ isFeatured: "desc" }, { publishedAt: "desc" }];
 
-  const [rows, total] = await Promise.all([
-    db.product.findMany({
-      where,
-      select: cardSelect,
-      orderBy,
-      skip: (page - 1) * perPage,
-      take: perPage,
-    }),
-    db.product.count({ where }),
-  ]);
+  const specialSort = [
+    "precio-asc",
+    "precio-desc",
+    "ofertas",
+    "vendidos",
+  ].includes(params.sort ?? "");
 
-  // Ordenamientos por precio se resuelven en memoria (precio = min de variantes).
-  let items = rows;
-  if (params.sort === "precio-asc" || params.sort === "precio-desc") {
-    const priceOf = (p: ProductCardData) =>
-      Math.min(...p.variants.map((v) => v.price), Number.MAX_SAFE_INTEGER);
-    items = [...rows].sort((a, b) =>
-      params.sort === "precio-asc"
-        ? priceOf(a) - priceOf(b)
-        : priceOf(b) - priceOf(a),
+  let items: ProductCardData[];
+  let total: number;
+  if (specialSort) {
+    const candidates = await db.product.findMany({
+      where,
+      select: {
+        id: true,
+        publishedAt: true,
+        variants: {
+          where: { isActive: true },
+          select: { price: true, compareAtPrice: true },
+        },
+      },
+    });
+    total = candidates.length;
+    const sales =
+      params.sort === "vendidos" && candidates.length > 0
+        ? await db.orderItem.groupBy({
+            by: ["productId"],
+            where: {
+              productId: { in: candidates.map((item) => item.id) },
+              order: { paymentStatus: "PAID" },
+            },
+            _sum: { quantity: true },
+          })
+        : [];
+    const salesByProduct = new Map(
+      sales.map((row) => [row.productId, row._sum.quantity ?? 0]),
     );
-  }
-  if (params.sort === "ofertas") {
-    const disc = (p: ProductCardData) =>
+    const priceOf = (item: (typeof candidates)[number]) =>
+      Math.min(
+        ...item.variants.map((variant) => variant.price),
+        Number.MAX_SAFE_INTEGER,
+      );
+    const discountOf = (item: (typeof candidates)[number]) =>
       Math.max(
         0,
-        ...p.variants.map((v) =>
-          v.compareAtPrice && v.compareAtPrice > v.price
-            ? (v.compareAtPrice - v.price) / v.compareAtPrice
+        ...item.variants.map((variant) =>
+          variant.compareAtPrice && variant.compareAtPrice > variant.price
+            ? (variant.compareAtPrice - variant.price) / variant.compareAtPrice
             : 0,
         ),
       );
-    items = [...rows].sort((a, b) => disc(b) - disc(a));
+    candidates.sort((a, b) => {
+      if (params.sort === "precio-asc") return priceOf(a) - priceOf(b);
+      if (params.sort === "precio-desc") return priceOf(b) - priceOf(a);
+      if (params.sort === "ofertas") return discountOf(b) - discountOf(a);
+      return (
+        (salesByProduct.get(b.id) ?? 0) -
+          (salesByProduct.get(a.id) ?? 0) ||
+        (b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0)
+      );
+    });
+    const ids = candidates
+      .slice((page - 1) * perPage, page * perPage)
+      .map((item) => item.id);
+    const rows = ids.length
+      ? await db.product.findMany({
+          where: { id: { in: ids } },
+          select: cardSelect,
+        })
+      : [];
+    const position = new Map(ids.map((id, index) => [id, index]));
+    items = rows.sort(
+      (a, b) => (position.get(a.id) ?? 0) - (position.get(b.id) ?? 0),
+    );
+  } else {
+    [items, total] = await Promise.all([
+      db.product.findMany({
+        where,
+        select: cardSelect,
+        orderBy,
+        skip: (page - 1) * perPage,
+        take: perPage,
+      }),
+      db.product.count({ where }),
+    ]);
   }
 
   return {

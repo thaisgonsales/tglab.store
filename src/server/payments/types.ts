@@ -1,5 +1,5 @@
 export type PaymentProviderKey =
-  "MERCADOPAGO" | "WEBPAY" | "FLOW" | "BANK_TRANSFER";
+  "MERCADOPAGO" | "WEBPAY" | "BANK_TRANSFER";
 
 export type PaymentMethodInfo = {
   key: PaymentProviderKey;

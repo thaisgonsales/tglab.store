@@ -35,7 +35,6 @@ export type TrackingView = {
     number: string | null;
     url: string | null;
   };
-  history: { at: string; label: string; note: string | null }[];
   needsPayment: boolean;
 };
 
@@ -161,11 +160,6 @@ export async function lookupOrderTrackingForIp(
         number: order.trackingNumber,
         url: order.trackingUrl,
       },
-      history: order.statusHistory.map((h) => ({
-        at: formatDateTime(h.createdAt),
-        label: STATUS_LABEL[h.toStatus] ?? h.toStatus,
-        note: h.note,
-      })),
       needsPayment:
         order.paymentStatus === "PENDING" && order.status === "PENDING_PAYMENT",
     },

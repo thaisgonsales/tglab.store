@@ -239,12 +239,22 @@ export async function updateVariant(
     const data = variantUpdateSchema.parse(input);
     const variant = await db.productVariant.findUnique({
       where: { id: variantId },
-      select: { id: true, productId: true, stock: true },
+      select: {
+        id: true,
+        productId: true,
+        stock: true,
+        reservedStock: true,
+      },
     });
     if (!variant) throw new ActionError("La variante no existe.");
     if (data.compareAtPrice !== null && data.compareAtPrice <= data.price) {
       throw new ActionError(
         "El precio anterior debe ser mayor que el precio actual.",
+      );
+    }
+    if (data.stock < variant.reservedStock) {
+      throw new ActionError(
+        `No puedes dejar el stock bajo ${variant.reservedStock}: hay unidades reservadas en pedidos pendientes.`,
       );
     }
 
@@ -260,10 +270,15 @@ export async function updateVariant(
         },
       });
       if (data.stock !== variant.stock) {
-        await tx.productVariant.update({
-          where: { id: variantId },
+        const updated = await tx.productVariant.updateMany({
+          where: { id: variantId, reservedStock: { lte: data.stock } },
           data: { stock: data.stock },
         });
+        if (updated.count !== 1) {
+          throw new ActionError(
+            "El stock cambió mientras guardabas. Recarga y vuelve a intentarlo.",
+          );
+        }
         await recordMovement(tx, {
           variantId,
           type: data.stock > variant.stock ? "RESTOCK" : "ADJUSTMENT",

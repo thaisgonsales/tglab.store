@@ -97,6 +97,15 @@ function checkProductionEnvironment(): CheckResult {
     warnings.push("Sentry no está configurado: faltará monitoreo de errores.");
   }
 
+  const hasChilexpressKeys = Boolean(
+    env.CHILEXPRESS_COVERAGE_API_KEY && env.CHILEXPRESS_RATING_API_KEY,
+  );
+  if (hasChilexpressKeys && env.CHILEXPRESS_API_ENV !== "production") {
+    errors.push(
+      "Chilexpress tiene credenciales, pero continúa usando servicios de prueba.",
+    );
+  }
+
   const hasBankTransfer = env.PAYMENTS_BANK_TRANSFER_ENABLED === "true";
   const hasMercadoPagoCredentials = Boolean(
     env.MERCADOPAGO_ACCESS_TOKEN &&

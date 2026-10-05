@@ -1,7 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -13,8 +12,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
  *   npm run test:integration
  */
 export default defineConfig({
-  plugins: [tsconfigPaths()],
   resolve: {
+    tsconfigPaths: true,
     alias: {
       // `import "server-only"` es un no-op fuera de Next.
       "server-only": path.join(here, "tests/stubs/empty.ts"),

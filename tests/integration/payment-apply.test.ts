@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { slugify } from "@/lib/slug";
 import { db } from "@/server/db";
-import { reserveStock } from "@/server/services/inventory-service";
+import {
+  releaseReservations,
+  reserveStock,
+} from "@/server/services/inventory-service";
 import {
   applyProviderPayment,
   type ProviderPaymentResult,
@@ -13,7 +16,7 @@ import {
  *  - monto insuficiente -> NO marca pagado (protección anti-manipulación)
  *  - aprobado -> marca PAID y descuenta el stock (consume reservas)
  *  - reintento del webhook -> idempotente (no descuenta dos veces)
- *  - rechazado -> libera las reservas
+ *  - rechazado -> conserva la reserva para permitir un nuevo intento seguro
  */
 
 let variantId: string;
@@ -47,6 +50,16 @@ async function setup(grandTotal: number) {
       paymentStatus: "PENDING",
       subtotal: grandTotal,
       grandTotal,
+      items: {
+        create: {
+          productId,
+          variantId,
+          productName: name,
+          unitPrice: Math.floor(grandTotal / 2),
+          quantity: 2,
+          lineTotal: grandTotal,
+        },
+      },
     },
   });
   orderId = order.id;
@@ -94,6 +107,12 @@ describe("applyProviderPayment", () => {
     expect(variant.stock).toBe(10); // no se descontó
   });
 
+  it("rechaza un pago aprobado sin monto verificable", async () => {
+    await applyProviderPayment(mpResult({ status: "PAID", amountPaid: null }));
+    const order = await db.order.findUniqueOrThrow({ where: { id: orderId } });
+    expect(order.paymentStatus).toBe("PENDING");
+  });
+
   it("aprueba y descuenta stock cuando el monto cubre el total", async () => {
     const res = mpResult({ status: "PAID", amountPaid: 10_000 });
     await applyProviderPayment(res);
@@ -121,7 +140,7 @@ describe("applyProviderPayment", () => {
     expect(variant2.stock).toBe(8);
   });
 
-  it("libera las reservas cuando el pago es rechazado", async () => {
+  it("conserva las reservas cuando el pago es rechazado", async () => {
     await applyProviderPayment(
       mpResult({ status: "REJECTED", amountPaid: null }),
     );
@@ -130,7 +149,58 @@ describe("applyProviderPayment", () => {
     const variant = await db.productVariant.findUniqueOrThrow({
       where: { id: variantId },
     });
-    expect(variant.reservedStock).toBe(0);
+    expect(variant.reservedStock).toBe(2);
     expect(variant.stock).toBe(10);
+
+    await applyProviderPayment(
+      mpResult({ status: "PAID", amountPaid: 10_000 }),
+    );
+    const paidVariant = await db.productVariant.findUniqueOrThrow({
+      where: { id: variantId },
+    });
+    expect(paidVariant.reservedStock).toBe(0);
+    expect(paidVariant.stock).toBe(8);
+  });
+
+  it("vuelve a reservar y descuenta stock si el pago llega después del vencimiento", async () => {
+    await db.$transaction((tx) =>
+      releaseReservations(tx, orderId, "Vencimiento de prueba"),
+    );
+
+    await applyProviderPayment(
+      mpResult({ status: "PAID", amountPaid: 10_000 }),
+    );
+
+    const [order, variant] = await Promise.all([
+      db.order.findUniqueOrThrow({ where: { id: orderId } }),
+      db.productVariant.findUniqueOrThrow({ where: { id: variantId } }),
+    ]);
+    expect(order.paymentStatus).toBe("PAID");
+    expect(order.internalNotes).toBeNull();
+    expect(variant.stock).toBe(8);
+    expect(variant.reservedStock).toBe(0);
+  });
+
+  it("registra alerta manual si un pago tardío llega sin stock", async () => {
+    await db.$transaction((tx) =>
+      releaseReservations(tx, orderId, "Vencimiento de prueba"),
+    );
+    await db.productVariant.update({
+      where: { id: variantId },
+      data: { stock: 0 },
+    });
+
+    await applyProviderPayment(
+      mpResult({ status: "PAID", amountPaid: 10_000 }),
+    );
+
+    const [order, variant] = await Promise.all([
+      db.order.findUniqueOrThrow({ where: { id: orderId } }),
+      db.productVariant.findUniqueOrThrow({ where: { id: variantId } }),
+    ]);
+    expect(order.paymentStatus).toBe("PAID");
+    expect(order.internalNotes).toContain("PAGO APROBADO SIN STOCK");
+    expect(variant.stock).toBe(0);
+    expect(variant.reservedStock).toBe(0);
   });
 });

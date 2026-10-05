@@ -79,6 +79,8 @@ const cartInclude = {
               status: true,
               archivedAt: true,
               isCustomizable: true,
+              allowsShipping: true,
+              allowsPickup: true,
               weightGrams: true,
               packageWeightGrams: true,
               media: {
@@ -131,7 +133,12 @@ export async function quoteCart(input: QuoteInput): Promise<Quote> {
     const freeStock = v.stock - v.reservedStock;
     const published =
       v.product.status === "PUBLISHED" && v.product.archivedAt === null;
-    const available = published && v.isActive && freeStock >= item.quantity;
+    const fulfillsMethod =
+      input.fulfillmentMethod === "SHIPPING"
+        ? v.product.allowsShipping
+        : v.product.allowsPickup;
+    const available =
+      published && v.isActive && fulfillsMethod && freeStock >= item.quantity;
     const label =
       v.attributeValues.map((av) => av.attributeValue.label).join(" / ") ||
       null;
