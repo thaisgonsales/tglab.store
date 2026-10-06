@@ -17,6 +17,7 @@ import {
 } from "@/server/services/inventory-service";
 import { sendOrderStatusEmail } from "@/server/email/order-emails";
 import { releaseCouponUse } from "@/server/services/coupon-service";
+import { generateEnviaLabel } from "@/server/services/envia-fulfillment-service";
 
 const STATUS_FLOW: Record<OrderStatus, OrderStatus[]> = {
   // PAID solo puede alcanzarse desde los flujos de pago, que también consumen
@@ -501,6 +502,23 @@ export async function updateOrderTracking(
 
     revalidatePath(`/admin/pedidos/${data.orderId}`);
     return null;
+  });
+}
+
+const generateLabelSchema = z.object({ orderId: z.string().cuid() });
+
+/** Compra y guarda una guía solo tras la aprobación explícita del personal. */
+export async function generateShippingLabel(
+  input: z.input<typeof generateLabelSchema>,
+) {
+  return staffAction(async () => {
+    const { orderId } = generateLabelSchema.parse(input);
+    const order = await generateEnviaLabel(orderId);
+    revalidatePath(`/admin/pedidos/${orderId}`);
+    return {
+      labelUrl: order.shippingLabelUrl!,
+      trackingNumber: order.trackingNumber!,
+    };
   });
 }
 

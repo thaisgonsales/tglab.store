@@ -599,6 +599,11 @@ model Order {
   carrier           String?
   trackingNumber    String?
   trackingUrl       String?
+  shippingLabelUrl       String?
+  shippingShipmentId     String?
+  shippingLabelPrice     Int?
+  shippingLabelCreatedAt DateTime?
+  shippingLabelRequestedAt DateTime?
 
   // Ventana de pago: al vencer, se liberan las reservas de stock.
   expiresAt DateTime?
@@ -608,6 +613,7 @@ model Order {
   subtotal      Int
   discountTotal Int    @default(0)
   shippingTotal Int    @default(0)
+  shippingQuotedPrice Int?
   grandTotal    Int
 
   couponId   String?
@@ -694,6 +700,10 @@ model OrderItem {
   lineDiscount Int     @default(0)
   lineTotal    Int
   isPersonalized Boolean @default(false)
+  packageWeightGrams Int?
+  packageLengthCm    Int?
+  packageWidthCm     Int?
+  packageHeightCm    Int?
 
   customizations OrderItemCustomization[]
   review ProductReview?

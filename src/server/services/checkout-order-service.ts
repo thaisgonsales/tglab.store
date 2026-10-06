@@ -82,6 +82,12 @@ export async function createOrder(
       shippingRateId: data.shippingRateId,
       couponCode: data.couponCode,
       customerEmail: data.email,
+      customerName: `${data.firstName} ${data.lastName}`,
+      customerPhone: data.phone,
+      street: data.street,
+      number: data.number,
+      postalCode: data.postalCode,
+      addressNotes: data.addressNotes,
     });
 
     if (quote.isEmpty) {
@@ -196,7 +202,9 @@ export async function createOrder(
             quote.selectedShipping?.deliveryType === "LOCAL_DELIVERY"
               ? "TG LAB"
               : quote.selectedShipping
-                ? quote.selectedShipping.rateId.startsWith("chilexpress:")
+                ? quote.selectedShipping.rateId.startsWith("envia:")
+                  ? quote.selectedShipping.zoneName
+                  : quote.selectedShipping.rateId.startsWith("chilexpress:")
                   ? "Chilexpress"
                   : "Despacho nacional"
                 : null,
@@ -204,6 +212,7 @@ export async function createOrder(
           subtotal: quote.subtotal,
           discountTotal: quote.discountTotal,
           shippingTotal: quote.shippingTotal,
+          shippingQuotedPrice: quote.selectedShipping?.price ?? null,
           grandTotal: quote.grandTotal,
           couponId: coupon?.id ?? null,
           couponCode: quote.appliedCoupon?.code ?? null,
@@ -228,6 +237,10 @@ export async function createOrder(
               lineDiscount: 0,
               lineTotal: line.lineTotal,
               isPersonalized: line.isPersonalized,
+              packageWeightGrams: line.packageWeightGrams,
+              packageLengthCm: line.packageLengthCm,
+              packageWidthCm: line.packageWidthCm,
+              packageHeightCm: line.packageHeightCm,
               customizations: {
                 create: line.customizations.map((c) => ({
                   key: c.key,

@@ -13,6 +13,12 @@ const quoteSchema = z.object({
   shippingRateId: z.string().trim().max(160).optional(),
   couponCode: z.string().max(40).optional(),
   customerEmail: z.string().email().max(160).optional().or(z.literal("")),
+  customerName: z.string().trim().max(140).optional(),
+  customerPhone: z.string().trim().max(20).optional(),
+  street: z.string().trim().max(120).optional(),
+  number: z.string().trim().max(20).optional(),
+  postalCode: z.string().trim().max(12).optional(),
+  addressNotes: z.string().trim().max(400).optional(),
 });
 
 /**

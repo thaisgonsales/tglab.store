@@ -4,6 +4,11 @@ import { cache } from "react";
 
 import { db } from "@/server/db";
 import { ChilexpressProvider } from "@/server/providers/shipping/chilexpress";
+import {
+  encodeEnviaRateId,
+  EnviaProvider,
+  type EnviaPackage,
+} from "@/server/providers/shipping/envia";
 
 /**
  * Cálculo de despacho. Las zonas, comunas cubiertas y tarifas se configuran
@@ -27,6 +32,34 @@ type Context = {
   comuna: string;
   subtotal: number;
   weightGrams: number;
+  postalCode?: string;
+  street?: string;
+  number?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  addressNotes?: string;
+  packages?: EnviaPackage[];
+};
+
+const REGION_CODES: Record<string, string> = {
+  "Región de Arica y Parinacota": "AP",
+  "Región de Tarapacá": "TA",
+  "Región de Antofagasta": "AN",
+  "Región de Atacama": "AT",
+  "Región de Coquimbo": "CO",
+  "Región de Valparaíso": "VS",
+  "Región Metropolitana de Santiago": "RM",
+  "Región del Libertador General Bernardo O’Higgins": "LI",
+  "Región del Libertador General Bernardo O'Higgins": "LI",
+  "Región del Maule": "ML",
+  "Región de Ñuble": "NB",
+  "Región del Biobío": "BI",
+  "Región de La Araucanía": "AR",
+  "Región de Los Ríos": "LR",
+  "Región de Los Lagos": "LL",
+  "Región de Aysén del General Carlos Ibáñez del Campo": "AI",
+  "Región de Magallanes y de la Antártica Chilena": "MA",
 };
 
 /**
@@ -36,6 +69,7 @@ type Context = {
 export async function getShippingOptions(
   ctx: Context,
 ): Promise<ShippingOption[]> {
+  const enviaProvider = new EnviaProvider();
   const zones = await db.shippingZone.findMany({
     where: {
       isActive: true,
@@ -83,25 +117,69 @@ export async function getShippingOptions(
 
   // La cotización externa siempre ocurre en el servidor. Ante una caída del
   // proveedor se conservan las opciones locales y nunca se inventa un precio.
-  try {
-    const quotes = await new ChilexpressProvider().quote({
-      destinationComuna: ctx.comuna,
-      weightGrams: ctx.weightGrams,
-      declaredWorth: ctx.subtotal,
-    });
-    for (const quote of quotes) {
-      options.push({
-        rateId: `chilexpress:${quote.serviceCode}:${ctx.comuna}`,
-        zoneId: "chilexpress",
-        zoneName: "Chilexpress",
-        name: quote.description,
-        deliveryType: "HOME",
-        price: quote.price,
-        free: quote.price === 0,
+  if (!enviaProvider.isConfigured()) {
+    try {
+      const quotes = await new ChilexpressProvider().quote({
+        destinationComuna: ctx.comuna,
+        weightGrams: ctx.weightGrams,
+        declaredWorth: ctx.subtotal,
       });
+      for (const quote of quotes) {
+        options.push({
+          rateId: `chilexpress:${quote.serviceCode}:${ctx.comuna}`,
+          zoneId: "chilexpress",
+          zoneName: "Chilexpress",
+          name: quote.description,
+          deliveryType: "HOME",
+          price: quote.price,
+          free: quote.price === 0,
+        });
+      }
+    } catch (error) {
+      console.error("[chilexpress:quote]", error);
     }
-  } catch (error) {
-    console.error("[chilexpress:quote]", error);
+  }
+
+  // Envia requiere una dirección suficiente para devolver valores reales.
+  // Si falta o el proveedor falla, se conservan únicamente las tarifas locales.
+  const state = REGION_CODES[ctx.region];
+  if (
+    state &&
+    ctx.postalCode &&
+    ctx.street &&
+    ctx.number &&
+    ctx.customerPhone &&
+    ctx.packages?.length
+  ) {
+    try {
+      const quotes = await enviaProvider.quote({
+        destination: {
+          name: ctx.customerName || "Cliente TG LAB",
+          email: ctx.customerEmail,
+          phone: ctx.customerPhone,
+          street: ctx.street,
+          number: ctx.number,
+          city: ctx.comuna,
+          state,
+          postalCode: ctx.postalCode,
+          reference: ctx.addressNotes,
+        },
+        packages: ctx.packages,
+      });
+      for (const quote of quotes) {
+        options.push({
+          rateId: encodeEnviaRateId(quote.carrier, quote.service),
+          zoneId: "envia",
+          zoneName: quote.carrier,
+          name: `${quote.description}${quote.deliveryEstimate ? ` · ${quote.deliveryEstimate}` : ""}`,
+          deliveryType: "HOME",
+          price: quote.price,
+          free: quote.price === 0,
+        });
+      }
+    } catch (error) {
+      console.error("[envia:quote]", error);
+    }
   }
 
   // Ordena por precio ascendente y deduplica por (nombre, precio).
@@ -135,9 +213,15 @@ export const getFulfillmentConfig = cache(async () => {
     });
     return {
       hasShipping:
-        zonesCount > 0 || new ChilexpressProvider().isConfigured(),
+        zonesCount > 0 ||
+        new EnviaProvider().isConfigured() ||
+        new ChilexpressProvider().isConfigured(),
     };
   } catch {
-    return { hasShipping: new ChilexpressProvider().isConfigured() };
+    return {
+      hasShipping:
+        new EnviaProvider().isConfigured() ||
+        new ChilexpressProvider().isConfigured(),
+    };
   }
 });

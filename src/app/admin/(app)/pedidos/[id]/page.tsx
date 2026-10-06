@@ -199,6 +199,8 @@ export default async function AdminOrderDetailPage({
           trackingNumber: order.trackingNumber ?? "",
           trackingUrl: order.trackingUrl ?? "",
           internalNotes: order.internalNotes ?? "",
+          shippingRateId: order.shippingRateId ?? "",
+          shippingLabelUrl: order.shippingLabelUrl ?? "",
           grandTotal: order.grandTotal,
           shippingTotal: order.shippingTotal,
           refundedTotal: order.payments.reduce(

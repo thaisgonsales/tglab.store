@@ -112,6 +112,13 @@ export function CheckoutForm({
   const rateId = watch("shippingRateId");
   const couponCode = watch("couponCode");
   const emailValue = watch("email");
+  const firstName = watch("firstName");
+  const lastName = watch("lastName");
+  const phone = watch("phone");
+  const street = watch("street");
+  const number = watch("number");
+  const postalCode = watch("postalCode");
+  const addressNotes = watch("addressNotes");
   const acceptedPersonalizedTerms = watch("acceptedPersonalizedTerms");
   const hasPersonalizedLines = quote.lines.some((line) => line.isPersonalized);
   const selectedShipping =
@@ -137,6 +144,12 @@ export function CheckoutForm({
         shippingRateId: rateId || undefined,
         couponCode: couponCode || undefined,
         customerEmail: emailValue?.includes("@") ? emailValue : undefined,
+        customerName: `${firstName ?? ""} ${lastName ?? ""}`.trim() || undefined,
+        customerPhone: phone || undefined,
+        street: street || undefined,
+        number: number || undefined,
+        postalCode: postalCode || undefined,
+        addressNotes: addressNotes || undefined,
       });
       if (!cancelled) {
         if (res.ok) setQuote(res.data);
@@ -147,7 +160,21 @@ export function CheckoutForm({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [method, region, comuna, rateId, couponCode, emailValue]);
+  }, [
+    method,
+    region,
+    comuna,
+    rateId,
+    couponCode,
+    emailValue,
+    firstName,
+    lastName,
+    phone,
+    street,
+    number,
+    postalCode,
+    addressNotes,
+  ]);
 
   async function onSubmit(values: CheckoutFormValues) {
     if (submitting.current) return;
@@ -323,7 +350,10 @@ export function CheckoutForm({
                       <Input {...register("apartment")} />
                     </FieldInput>
                   </div>
-                  <FieldInput label="Código postal (opcional)">
+                  <FieldInput
+                    label="Código postal (necesario para cotizar envíos)"
+                    error={errors.postalCode?.message}
+                  >
                     <Input
                       {...register("postalCode")}
                       autoComplete="postal-code"

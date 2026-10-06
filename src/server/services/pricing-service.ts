@@ -1,6 +1,7 @@
 import "server-only";
 
 import { discountPercent } from "@/lib/money";
+import { getEnv } from "@/lib/env";
 import { selectVariantImage } from "@/lib/product-media";
 import { db } from "@/server/db";
 import type { Prisma } from "@/generated/prisma/client";
@@ -32,6 +33,10 @@ export type QuoteLine = {
   available: boolean;
   maxStock: number;
   isPersonalized: boolean;
+  packageWeightGrams: number | null;
+  packageLengthCm: number | null;
+  packageWidthCm: number | null;
+  packageHeightCm: number | null;
   customizations: { key: string; label: string; value: string }[];
 };
 
@@ -65,6 +70,12 @@ export type QuoteInput = {
   shippingRateId?: string;
   couponCode?: string;
   customerEmail?: string;
+  customerName?: string;
+  customerPhone?: string;
+  street?: string;
+  number?: string;
+  postalCode?: string;
+  addressNotes?: string;
 };
 
 const cartInclude = {
@@ -84,6 +95,9 @@ const cartInclude = {
               allowsPickup: true,
               weightGrams: true,
               packageWeightGrams: true,
+              packageLength: true,
+              packageWidth: true,
+              packageHeight: true,
               media: {
                 where: { type: "IMAGE" as const },
                 orderBy: [
@@ -175,6 +189,14 @@ export async function quoteCart(input: QuoteInput): Promise<Quote> {
       available,
       maxStock: freeStock,
       isPersonalized: v.product.isCustomizable && custom.length > 0,
+      packageWeightGrams:
+        v.weightGrams ??
+        v.product.packageWeightGrams ??
+        v.product.weightGrams ??
+        null,
+      packageLengthCm: v.product.packageLength,
+      packageWidthCm: v.product.packageWidth,
+      packageHeightCm: v.product.packageHeight,
       customizations: custom,
     };
   });
@@ -229,12 +251,59 @@ export async function quoteCart(input: QuoteInput): Promise<Quote> {
         0;
       return acc + w * item.quantity;
     }, 0);
+    const env = getEnv();
+    const shippableItems = cart.items.filter((item) =>
+      payableLines.some((line) => line.cartItemId === item.id),
+    );
+    const packageLength = Math.max(
+      env.ENVIA_DEFAULT_PACKAGE_LENGTH_CM,
+      ...shippableItems.map(
+        (item) => item.variant.product.packageLength ?? 0,
+      ),
+    );
+    const packageWidth = Math.max(
+      env.ENVIA_DEFAULT_PACKAGE_WIDTH_CM,
+      ...shippableItems.map(
+        (item) => item.variant.product.packageWidth ?? 0,
+      ),
+    );
+    const packageHeight = Math.max(
+      env.ENVIA_DEFAULT_PACKAGE_HEIGHT_CM,
+      shippableItems.reduce(
+        (sum, item) =>
+          sum +
+          (item.variant.product.packageHeight ??
+            env.ENVIA_DEFAULT_PACKAGE_HEIGHT_CM) *
+            item.quantity,
+        0,
+      ),
+    );
 
     const ctx = {
       region: input.region,
       comuna: input.comuna,
       subtotal,
       weightGrams,
+      postalCode: input.postalCode,
+      street: input.street,
+      number: input.number,
+      customerName: input.customerName,
+      customerEmail: input.customerEmail,
+      customerPhone: input.customerPhone,
+      addressNotes: input.addressNotes,
+      packages: [
+        {
+          content: "Artículos decorativos impresos en 3D",
+          declaredValue: subtotal,
+          weightKg: Math.max(
+            0.1,
+            (weightGrams + env.ENVIA_PACKAGING_WEIGHT_GRAMS) / 1_000,
+          ),
+          lengthCm: packageLength,
+          widthCm: packageWidth,
+          heightCm: packageHeight,
+        },
+      ],
     };
     shippingOptions = await getShippingOptions(ctx);
 

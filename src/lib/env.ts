@@ -79,6 +79,23 @@ const serverEnvSchema = z.object({
     .int()
     .nonnegative()
     .default(150),
+
+  // Envia.com (sandbox por defecto; producción solo cuando la propietaria lo autorice).
+  ENVIA_API_ENV: z.enum(["test", "production"]).default("test"),
+  ENVIA_API_TOKEN: z.string().optional().default(""),
+  ENVIA_CARRIERS: z.string().default("correosChile,blueExpress,chilexpress"),
+  ENVIA_ORIGIN_NAME: z.string().default("TG LAB"),
+  ENVIA_ORIGIN_EMAIL: z.string().optional().default(""),
+  ENVIA_ORIGIN_PHONE: z.string().optional().default(""),
+  ENVIA_ORIGIN_STREET: z.string().optional().default(""),
+  ENVIA_ORIGIN_NUMBER: z.string().optional().default(""),
+  ENVIA_ORIGIN_COMUNA: z.string().default("Chonchi"),
+  ENVIA_ORIGIN_REGION_CODE: z.string().min(2).max(3).default("LL"),
+  ENVIA_ORIGIN_POSTAL_CODE: z.string().optional().default(""),
+  ENVIA_DEFAULT_PACKAGE_HEIGHT_CM: z.coerce.number().positive().default(10),
+  ENVIA_DEFAULT_PACKAGE_WIDTH_CM: z.coerce.number().positive().default(10),
+  ENVIA_DEFAULT_PACKAGE_LENGTH_CM: z.coerce.number().positive().default(10),
+  ENVIA_PACKAGING_WEIGHT_GRAMS: z.coerce.number().int().nonnegative().default(150),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

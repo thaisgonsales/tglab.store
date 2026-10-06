@@ -21,6 +21,7 @@ import {
   recordManualBoleta,
   recordManualCreditNote,
   updateOrderTracking,
+  generateShippingLabel,
 } from "@/server/actions/order-admin-actions";
 
 // Transiciones "hacia adelante" (la cancelación va por su propia acción).
@@ -43,6 +44,8 @@ type Order = {
   trackingNumber: string;
   trackingUrl: string;
   internalNotes: string;
+  shippingRateId: string;
+  shippingLabelUrl: string;
   grandTotal: number;
   shippingTotal: number;
   refundedTotal: number;
@@ -138,6 +141,10 @@ export function OrderActions({ order }: { order: Order }) {
     successMessage: "Guardado",
     onSuccess: () => router.refresh(),
   });
+  const generateLabel = useAction(generateShippingLabel, {
+    successMessage: "Etiqueta generada y seguimiento guardado",
+    onSuccess: () => router.refresh(),
+  });
   const cancel = useAction(cancelOrder, {
     successMessage: "Pedido cancelado",
     onSuccess: () => router.refresh(),
@@ -190,6 +197,52 @@ export function OrderActions({ order }: { order: Order }) {
         <CardTitle>Gestión</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
+        {order.shippingRateId.startsWith("envia:") &&
+          order.paymentStatus === "PAID" && (
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+              <p className="text-sm font-medium text-blue-950">
+                Envío mediante Envia.com
+              </p>
+              {order.shippingLabelUrl ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button asChild size="sm">
+                    <a
+                      href={order.shippingLabelUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Descargar etiqueta PDF
+                    </a>
+                  </Button>
+                  <span className="self-center text-xs text-blue-900">
+                    Seguimiento: {order.trackingNumber}
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <p className="mt-1 text-xs text-blue-900">
+                    Revisa productos, dirección y pago. Esta acción compra una
+                    guía y no se ejecuta automáticamente.
+                  </p>
+                  <ConfirmDialog
+                    title="Generar y comprar etiqueta"
+                    description="Envia.com puede descontar el valor de la guía. Confirma que revisaste este pedido pagado y su dirección."
+                    confirmLabel="Generar etiqueta"
+                    onConfirm={() => generateLabel.run({ orderId: order.id })}
+                    trigger={
+                      <Button
+                        className="mt-2"
+                        size="sm"
+                        disabled={generateLabel.isPending}
+                      >
+                        Generar envío
+                      </Button>
+                    }
+                  />
+                </>
+              )}
+            </div>
+          )}
         <div className="border-border rounded-md border p-3">
           <p className="text-sm font-medium">
             Solicitudes recibidas por atención
