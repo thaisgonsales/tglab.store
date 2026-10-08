@@ -17,7 +17,6 @@ const quoteSchema = z.object({
   customerPhone: z.string().trim().max(20).optional(),
   street: z.string().trim().max(120).optional(),
   number: z.string().trim().max(20).optional(),
-  postalCode: z.string().trim().max(12).optional(),
   addressNotes: z.string().trim().max(400).optional(),
 });
 

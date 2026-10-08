@@ -8,6 +8,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { evaluateCoupon } from "@/server/services/coupon-service";
 import {
   getShippingOptions,
+  resolveShippingPostalCode,
   resolveShippingRate,
   type ShippingOption,
 } from "@/server/services/shipping-service";
@@ -58,6 +59,8 @@ export type Quote = {
   appliedCoupon: AppliedCoupon | null;
   couponError: string | null;
   fulfillmentMethod: "SHIPPING" | "PICKUP";
+  /** Código técnico resuelto en servidor; no se solicita al comprador. */
+  resolvedPostalCode: string | null;
   hasUnavailableLines: boolean;
   isEmpty: boolean;
 };
@@ -74,7 +77,6 @@ export type QuoteInput = {
   customerPhone?: string;
   street?: string;
   number?: string;
-  postalCode?: string;
   addressNotes?: string;
 };
 
@@ -133,6 +135,7 @@ function emptyQuote(fulfillmentMethod: "SHIPPING" | "PICKUP"): Quote {
     appliedCoupon: null,
     couponError: null,
     fulfillmentMethod,
+    resolvedPostalCode: null,
     hasUnavailableLines: false,
     isEmpty: true,
   };
@@ -236,6 +239,7 @@ export async function quoteCart(input: QuoteInput): Promise<Quote> {
   let shippingOptions: ShippingOption[] = [];
   let selectedShipping: ShippingOption | null = null;
   let shippingTotal = 0;
+  let resolvedPostalCode: string | null = null;
 
   if (
     input.fulfillmentMethod === "SHIPPING" &&
@@ -243,6 +247,7 @@ export async function quoteCart(input: QuoteInput): Promise<Quote> {
     input.comuna &&
     payableLines.length > 0
   ) {
+    resolvedPostalCode = await resolveShippingPostalCode(input.comuna);
     const weightGrams = cart.items.reduce((acc, item) => {
       const w =
         item.variant.weightGrams ??
@@ -284,7 +289,7 @@ export async function quoteCart(input: QuoteInput): Promise<Quote> {
       comuna: input.comuna,
       subtotal,
       weightGrams,
-      postalCode: input.postalCode,
+      postalCode: resolvedPostalCode ?? undefined,
       street: input.street,
       number: input.number,
       customerName: input.customerName,
@@ -336,6 +341,7 @@ export async function quoteCart(input: QuoteInput): Promise<Quote> {
     appliedCoupon,
     couponError,
     fulfillmentMethod: input.fulfillmentMethod,
+    resolvedPostalCode,
     hasUnavailableLines: lines.some((l) => !l.available),
     isEmpty: payableLines.length === 0,
   };

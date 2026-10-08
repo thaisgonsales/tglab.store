@@ -117,7 +117,6 @@ export function CheckoutForm({
   const phone = watch("phone");
   const street = watch("street");
   const number = watch("number");
-  const postalCode = watch("postalCode");
   const addressNotes = watch("addressNotes");
   const acceptedPersonalizedTerms = watch("acceptedPersonalizedTerms");
   const hasPersonalizedLines = quote.lines.some((line) => line.isPersonalized);
@@ -148,7 +147,6 @@ export function CheckoutForm({
         customerPhone: phone || undefined,
         street: street || undefined,
         number: number || undefined,
-        postalCode: postalCode || undefined,
         addressNotes: addressNotes || undefined,
       });
       if (!cancelled) {
@@ -172,7 +170,6 @@ export function CheckoutForm({
     phone,
     street,
     number,
-    postalCode,
     addressNotes,
   ]);
 
@@ -350,15 +347,6 @@ export function CheckoutForm({
                       <Input {...register("apartment")} />
                     </FieldInput>
                   </div>
-                  <FieldInput
-                    label="Código postal (necesario para cotizar envíos)"
-                    error={errors.postalCode?.message}
-                  >
-                    <Input
-                      {...register("postalCode")}
-                      autoComplete="postal-code"
-                    />
-                  </FieldInput>
                   <FieldInput label="Indicaciones (opcional)">
                     <Input
                       {...register("addressNotes")}

@@ -83,16 +83,6 @@ const crossValidate = (
         message: "Ingresa el número",
       });
     }
-    if (
-      data.shippingRateId?.startsWith("envia:") &&
-      (!data.postalCode || !/^\d{7}$/.test(data.postalCode))
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["postalCode"],
-        message: "Ingresa un código postal chileno de 7 dígitos",
-      });
-    }
     if (!data.shippingRateId) {
       ctx.addIssue({
         code: "custom",

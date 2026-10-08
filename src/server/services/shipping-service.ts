@@ -27,6 +27,20 @@ export type ShippingOption = {
   free: boolean;
 };
 
+/** Resuelve el código postal técnico que Envia requiere para una comuna. */
+export async function resolveShippingPostalCode(
+  comuna: string,
+): Promise<string | null> {
+  const provider = new EnviaProvider();
+  if (!provider.isConfigured()) return null;
+  try {
+    return await provider.locatePostalCode(comuna);
+  } catch (error) {
+    console.error("[envia:postal-code]", error);
+    return null;
+  }
+}
+
 type Context = {
   region: string;
   comuna: string;

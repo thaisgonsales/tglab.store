@@ -86,7 +86,6 @@ export async function createOrder(
       customerPhone: data.phone,
       street: data.street,
       number: data.number,
-      postalCode: data.postalCode,
       addressNotes: data.addressNotes,
     });
 
@@ -161,7 +160,7 @@ export async function createOrder(
               street: data.street,
               number: data.number,
               apartment: data.apartment ?? null,
-              postalCode: data.postalCode ?? null,
+              postalCode: quote.resolvedPostalCode,
               notes: data.addressNotes ?? null,
             }
           : undefined;
