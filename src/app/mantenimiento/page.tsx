@@ -17,6 +17,7 @@ export default async function MaintenancePage() {
         <BrandLogo
           name={brand.storeName}
           className="mx-auto h-24 w-auto sm:h-28"
+          eager
         />
         <p className="text-brand mt-10 text-xs font-semibold tracking-[0.22em] uppercase">
           Estamos preparando algo especial

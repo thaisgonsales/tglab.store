@@ -62,7 +62,7 @@
     "lucide-react": "^1.42.0",
     "mercadopago": "^3.6.0",
     "nanoid": "^6.0.1",
-    "next": "16.3.6",
+    "next": "^16.4.0",
     "railway": "^3.12.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -70,7 +70,7 @@
     "react-icons": "^5.7.0",
     "resend": "^6.26.0",
     "server-only": "^0.0.1",
-    "sharp": "^0.35.4",
+    "sharp": "^0.35.5",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
     "transbank-sdk": "^6.1.1",
@@ -88,7 +88,7 @@
     "dotenv": "^17.4.2",
     "dotenv-cli": "^11.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.3.6",
+    "eslint-config-next": "^16.4.0",
     "jsdom": "^26.1.0",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
@@ -100,7 +100,8 @@
   },
   "overrides": {
     "deepmerge-ts": "^8.0.2",
-    "mysql2": "^3.24.3"
+    "mysql2": "^3.24.3",
+    "source-map-js": "^1.2.2"
   },
   "allowScripts": {
     "@prisma/engines@7.10.0": true,

@@ -66,7 +66,7 @@ export function SiteHeader({
           aria-label={`Ir al inicio de ${storeName}`}
           className="rounded-lg transition-transform duration-300 hover:-translate-y-0.5"
         >
-          <BrandLogo name={storeName} className="h-11 sm:h-16" />
+          <BrandLogo name={storeName} className="h-11 sm:h-16" eager />
         </Link>
 
         <nav className="border-border/60 ml-4 hidden items-center gap-5 rounded-full border bg-white/55 px-5 text-sm shadow-[0_5px_18px_rgba(41,39,45,.035)] md:flex">

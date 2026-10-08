@@ -40,6 +40,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: {
     formats: ["image/avif", "image/webp"],
+    qualities: [75, 100],
     remotePatterns,
     // El placeholder de producto es un SVG propio; el contenido de terceros
     // se re-encoda a WebP en el pipeline de subida (nunca se guardan SVG).

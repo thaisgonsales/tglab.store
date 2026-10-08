@@ -3,19 +3,9 @@ import "server-only";
 import { z } from "zod";
 
 import { getEnv } from "@/lib/env";
+import { parseEnviaPostalCode } from "@/lib/envia-geocodes";
 
 const REQUEST_TIMEOUT_MS = 10_000;
-
-const locationSchema = z.array(
-  z.object({
-    zip_codes: z.array(
-      z.object({
-        zip_code: z.string(),
-        locality: z.string().optional(),
-      }),
-    ),
-  }),
-);
 
 const rateSchema = z.object({
   carrier: z.string().trim().min(1),
@@ -172,30 +162,7 @@ export class EnviaProvider {
     );
     if (!response.ok) return null;
 
-    const parsed = locationSchema.safeParse(await response.json());
-    if (!parsed.success) return null;
-
-    const normalizedCity = city
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLocaleLowerCase("es-CL");
-    const entries = parsed.data.flatMap((location) => location.zip_codes);
-    const exact = entries.filter(
-      (entry) =>
-        entry.locality
-          ?.normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .toLocaleLowerCase("es-CL") === normalizedCity,
-    );
-    const candidates = exact.length > 0 ? exact : entries;
-    const postalCodes = [
-      ...new Set(
-        candidates
-          .map((entry) => entry.zip_code.trim())
-          .filter((value) => /^\d{7}$/.test(value)),
-      ),
-    ];
-    return postalCodes.length === 1 ? postalCodes[0]! : null;
+    return parseEnviaPostalCode(await response.json(), city);
   }
 
   async quote(input: {
