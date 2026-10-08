@@ -31,6 +31,15 @@ const labelResponseSchema = z.object({
     }),
   ).min(1),
 });
+const apiErrorSchema = z.object({
+  meta: z.literal("error"),
+  error: z.object({
+    code: z.union([z.string(), z.number()]).optional(),
+    description: z.string().optional(),
+    message: z.string().optional(),
+  }),
+  carrier_message: z.string().optional(),
+});
 
 export type EnviaAddress = {
   name: string;
@@ -117,6 +126,18 @@ async function post(path: string, body: unknown): Promise<unknown> {
   if (!response.ok) {
     throw new Error(`Envia.com respondió HTTP ${response.status}`);
   }
+  const apiError = apiErrorSchema.safeParse(raw);
+  if (apiError.success) {
+    const details =
+      apiError.data.carrier_message ||
+      apiError.data.error.message ||
+      apiError.data.error.description ||
+      "Solicitud rechazada";
+    const code = apiError.data.error.code;
+    throw new Error(
+      `Envia.com rechazó la solicitud${code === undefined ? "" : ` (${code})`}: ${details.slice(0, 300)}`,
+    );
+  }
   return raw;
 }
 
@@ -192,7 +213,10 @@ export class EnviaProvider {
         return [];
       }
       const parsed = ratesResponseSchema.safeParse(result.value);
-      if (!parsed.success) return [];
+      if (!parsed.success) {
+        console.error("[envia:rate-response] respuesta inválida");
+        return [];
+      }
       return parsed.data.data.flatMap((rate) => {
         const price = Math.round(Number(rate.totalPrice));
         if (!Number.isFinite(price) || price < 0) return [];
