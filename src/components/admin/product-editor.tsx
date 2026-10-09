@@ -1,7 +1,15 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ExternalLink } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ExternalLink,
+  ImageIcon,
+  PackageCheck,
+  Palette,
+  PencilLine,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -20,7 +28,6 @@ import {
 } from "@/components/admin/custom-fields-section";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -156,6 +163,16 @@ export function ProductEditor({
   const allowsShipping = watch("allowsShipping") ?? true;
   const allowsPickup = watch("allowsPickup") ?? true;
 
+  const stepStatus = [
+    Boolean(product.name && product.categoryIds.length > 0),
+    product.type === "SIMPLE" ? product.price > 0 : variants.length > 0,
+    media.some((item) => item.type === "IMAGE"),
+    Boolean(
+      (product.allowsShipping || product.allowsPickup) &&
+      product.status !== "DRAFT",
+    ),
+  ];
+
   function toggleCategory(id: string) {
     const next = categoryIds.includes(id)
       ? categoryIds.filter((c) => c !== id)
@@ -200,229 +217,262 @@ export function ProductEditor({
         }
       />
 
+      <div
+        className="mb-6 grid grid-cols-4 gap-2"
+        aria-label="Progreso del producto"
+      >
+        {[
+          { label: "Información", icon: PencilLine },
+          { label: "Opciones", icon: Palette },
+          { label: "Fotos", icon: ImageIcon },
+          { label: "Publicación", icon: PackageCheck },
+        ].map(({ label, icon: Icon }, index) => (
+          <a
+            key={label}
+            href={`#paso-${index + 1}`}
+            className="border-border bg-surface hover:border-brand/40 flex min-w-0 flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition-colors"
+          >
+            <span
+              className={`flex size-7 items-center justify-center rounded-full ${
+                stepStatus[index]
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-surface-muted text-foreground-muted"
+              }`}
+            >
+              {stepStatus[index] ? (
+                <Check className="size-4" />
+              ) : (
+                <Icon className="size-4" />
+              )}
+            </span>
+            <span className="truncate text-xs font-medium">{label}</span>
+          </a>
+        ))}
+      </div>
+
       <form
         onSubmit={handleSubmit((v) => save.run(v))}
-        className="space-y-6 pb-24"
+        className="space-y-5 pb-24"
       >
-        <Card>
-          <CardHeader>
-            <CardTitle>Información</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <EditorStep
+          id="paso-1"
+          number={1}
+          title="Información del producto"
+          description="Lo esencial que verá el cliente en la tienda."
+          complete={stepStatus[0]!}
+        >
+          <div className="space-y-4">
             <Field label="Nombre" error={errors.name?.message}>
               <Input {...register("name")} aria-invalid={!!errors.name} />
             </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Slug" error={errors.slug?.message}>
-                <Input {...register("slug")} aria-invalid={!!errors.slug} />
-              </Field>
-              <Field label="SKU" error={errors.sku?.message}>
-                <Input {...register("sku")} />
-              </Field>
-            </div>
             <Field
-              label="Descripción corta"
+              label="Descripción breve"
               error={errors.shortDescription?.message}
             >
-              <Textarea rows={2} {...register("shortDescription")} />
+              <Textarea
+                rows={2}
+                placeholder="Una frase clara para presentar el producto"
+                {...register("shortDescription")}
+              />
             </Field>
             <Field label="Descripción completa">
-              <Textarea rows={6} {...register("description")} />
+              <Textarea
+                rows={6}
+                placeholder="Materiales, usos, contenido y detalles importantes"
+                {...register("description")}
+              />
             </Field>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Categorías</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {errors.categoryIds && (
-              <p className="mb-2 text-xs text-red-600">
-                {errors.categoryIds.message}
+            <div>
+              <Label>Categorías</Label>
+              <p className="text-foreground-muted mb-2 text-xs">
+                Puedes elegir varias y marcar una como principal.
               </p>
+              {errors.categoryIds && (
+                <p className="mb-2 text-xs text-red-600">
+                  {errors.categoryIds.message}
+                </p>
+              )}
+              <ul className="border-border max-h-56 space-y-1 overflow-y-auto rounded-xl border p-2">
+                {categories.map((c) => {
+                  const checked = categoryIds.includes(c.id);
+                  return (
+                    <li
+                      key={c.id}
+                      className="hover:bg-surface-muted flex items-center justify-between gap-2 rounded-lg px-2 py-1.5"
+                      style={{ paddingLeft: `${c.depth * 16 + 8}px` }}
+                    >
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleCategory(c.id)}
+                        />
+                        {c.label}
+                      </label>
+                      {checked && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setValue("primaryCategoryId", c.id, {
+                              shouldDirty: true,
+                            })
+                          }
+                          className={`text-xs ${primaryCategoryId === c.id ? "text-brand font-medium" : "text-foreground-muted"}`}
+                        >
+                          {primaryCategoryId === c.id
+                            ? "Principal"
+                            : "Hacer principal"}
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            <details className="border-border rounded-xl border">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium">
+                Identificadores avanzados
+                <ChevronDown className="size-4" />
+              </summary>
+              <div className="grid gap-4 border-t p-4 sm:grid-cols-2">
+                <Field
+                  label="Dirección web (slug)"
+                  error={errors.slug?.message}
+                >
+                  <Input {...register("slug")} aria-invalid={!!errors.slug} />
+                </Field>
+                <Field label="SKU interno" error={errors.sku?.message}>
+                  <Input {...register("sku")} />
+                </Field>
+              </div>
+            </details>
+          </div>
+        </EditorStep>
+
+        <EditorStep
+          id="paso-2"
+          number={2}
+          title="Precio, stock y opciones"
+          description={
+            product.type === "SIMPLE"
+              ? "Producto sin colores, tamaños ni modelos diferentes."
+              : "Cada combinación puede tener su propio precio y stock."
+          }
+          complete={stepStatus[1]!}
+        >
+          <div className="space-y-5">
+            {product.type === "SIMPLE" ? (
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field label="Precio (CLP)" error={errors.price?.message}>
+                  <Input
+                    inputMode="numeric"
+                    {...register("price")}
+                    aria-invalid={!!errors.price}
+                  />
+                </Field>
+                <Field label="Precio anterior (opcional)">
+                  <Input inputMode="numeric" {...register("compareAtPrice")} />
+                </Field>
+                <Field label="Stock" error={errors.stock?.message}>
+                  <Input type="number" min={0} {...register("stock")} />
+                </Field>
+              </div>
+            ) : (
+              <div className="bg-brand/5 border-brand/15 rounded-xl border p-3 text-sm">
+                Edita el precio y el stock directamente en cada combinación.
+              </div>
             )}
-            <ul className="space-y-1">
-              {categories.map((c) => {
-                const checked = categoryIds.includes(c.id);
-                return (
-                  <li
-                    key={c.id}
-                    className="hover:bg-surface-muted flex items-center justify-between gap-2 rounded px-2 py-1"
-                    style={{ paddingLeft: `${c.depth * 16 + 8}px` }}
-                  >
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleCategory(c.id)}
-                      />
-                      {c.label}
-                    </label>
-                    {checked && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setValue("primaryCategoryId", c.id, {
-                            shouldDirty: true,
-                          })
-                        }
-                        className={`text-xs ${
-                          primaryCategoryId === c.id
-                            ? "text-brand font-medium"
-                            : "text-foreground-muted hover:text-foreground"
-                        }`}
-                      >
-                        {primaryCategoryId === c.id
-                          ? "Principal"
-                          : "Hacer principal"}
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </CardContent>
-        </Card>
 
-        {product.type === "SIMPLE" ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Precio e inventario</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-3">
-              <Field label="Precio (CLP)" error={errors.price?.message}>
-                <Input
-                  inputMode="numeric"
-                  {...register("price")}
-                  aria-invalid={!!errors.price}
-                />
-              </Field>
-              <Field label="Precio anterior">
-                <Input inputMode="numeric" {...register("compareAtPrice")} />
-              </Field>
-              <Field label="Stock" error={errors.stock?.message}>
-                <Input type="number" min={0} {...register("stock")} />
-              </Field>
-              <Field label="Aviso de stock bajo (unidades)">
-                <Input
-                  type="number"
-                  min={0}
-                  {...register("lowStockThreshold")}
-                />
-              </Field>
-              <Field label="&ldquo;Últimas unidades&rdquo; (unidades)">
-                <Input
-                  type="number"
-                  min={0}
-                  {...register("lastUnitsThreshold")}
-                />
-              </Field>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Precio e inventario</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-foreground-muted text-sm">
-                Este producto tiene variantes. El precio y el stock se editan
-                por combinación, más abajo.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Variantes</CardTitle>
-          </CardHeader>
-          <CardContent>
             <VariantsSection
               productId={product.id}
               allAttributes={allAttributes}
               assignedAttributeIds={assignedAttributeIds}
               variants={variants}
             />
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Campos personalizados</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <ToggleRow
-              label="Mostrar este modelo en la sección Personalizados"
-              checked={product.isCustomizable}
-              onChange={(enabled) => customizable.run(enabled)}
-            />
-            <p className="text-foreground-muted text-xs">
-              Usa atributos para colores, partes, fotos y precios; utiliza los
-              campos siguientes para nombres, textos, medidas o instrucciones.
-            </p>
-            <CustomFieldsSection
-              productId={product.id}
-              initial={customFields}
-            />
-          </CardContent>
-        </Card>
+            <details className="border-border rounded-xl border">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium">
+                Alertas de inventario
+                <ChevronDown className="size-4" />
+              </summary>
+              <div className="grid gap-4 border-t p-4 sm:grid-cols-2">
+                <Field label="Avisar cuando queden">
+                  <Input
+                    type="number"
+                    min={0}
+                    {...register("lowStockThreshold")}
+                  />
+                </Field>
+                <Field label="Mostrar “Últimas unidades” cuando queden">
+                  <Input
+                    type="number"
+                    min={0}
+                    {...register("lastUnitsThreshold")}
+                  />
+                </Field>
+              </div>
+            </details>
+          </div>
+        </EditorStep>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Fotos y videos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <MediaManager
-              productId={product.id}
-              initialMedia={media}
-              variants={variants.map((variant) => ({
-                id: variant.id,
-                label: variant.optionLabels
-                  .map((option) => `${option.attribute}: ${option.value}`)
-                  .join(" · "),
-              }))}
-              colors={allAttributes
-                .filter(
-                  (attribute) =>
-                    attribute.type === "COLOR" &&
-                    assignedAttributeIds.includes(attribute.id),
-                )
-                .flatMap((attribute) =>
-                  attribute.values
-                    .map((value) => ({
-                      id: value.id,
-                      label: `${attribute.name}: ${value.label}`,
-                      hex: value.hex || null,
-                    }))
-                    .filter((value) =>
-                      usedAttributeValueIds.includes(value.id),
-                    ),
-                )}
-            />
-          </CardContent>
-        </Card>
+        <EditorStep
+          id="paso-3"
+          number={3}
+          title="Fotos y videos"
+          description="Arrastra las fotos, ordénalas y asígnalas a un color cuando corresponda."
+          complete={stepStatus[2]!}
+        >
+          <MediaManager
+            productId={product.id}
+            initialMedia={media}
+            variants={variants.map((variant) => ({
+              id: variant.id,
+              label: variant.optionLabels
+                .map((option) => `${option.attribute}: ${option.value}`)
+                .join(" · "),
+            }))}
+            colors={allAttributes
+              .filter(
+                (attribute) =>
+                  attribute.type === "COLOR" &&
+                  assignedAttributeIds.includes(attribute.id),
+              )
+              .flatMap((attribute) =>
+                attribute.values
+                  .map((value) => ({
+                    id: value.id,
+                    label: value.label,
+                    hex: value.hex || null,
+                  }))
+                  .filter((value) => usedAttributeValueIds.includes(value.id)),
+              )}
+          />
+        </EditorStep>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Información técnica y despacho</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <EditorStep
+          id="paso-4"
+          number={4}
+          title="Preparación, entrega y publicación"
+          description="Completa lo necesario para cobrar y despachar correctamente."
+          complete={stepStatus[3]!}
+        >
+          <div className="space-y-5">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Material">
-                <Input {...register("material")} />
+                <Input placeholder="Ej. PLA" {...register("material")} />
               </Field>
-              <Field label="Dimensiones">
+              <Field label="Medidas del producto">
                 <Input
-                  placeholder="10 x 8 x 4 cm"
+                  placeholder="10 × 8 × 4 cm"
                   {...register("dimensions")}
                 />
               </Field>
               <Field label="Peso del producto (g)">
                 <Input type="number" min={0} {...register("weightGrams")} />
               </Field>
-              <Field label="Peso del paquete (g)">
+              <Field label="Peso embalado para cotizar el envío (g)">
                 <Input
                   type="number"
                   min={0}
@@ -430,90 +480,123 @@ export function ProductEditor({
                 />
               </Field>
             </div>
-            <ToggleRow
-              label="Permite despacho"
-              checked={allowsShipping}
-              onChange={(v) =>
-                setValue("allowsShipping", v, { shouldDirty: true })
-              }
-            />
-            <ToggleRow
-              label="Permite retiro"
-              checked={allowsPickup}
-              onChange={(v) =>
-                setValue("allowsPickup", v, { shouldDirty: true })
-              }
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Visibilidad y SEO</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Field label="Estado">
-              <Select {...register("status")}>
-                <option value="DRAFT">Borrador (no visible)</option>
-                <option value="PUBLISHED">Publicado</option>
-                <option value="HIDDEN">Oculto</option>
-              </Select>
-            </Field>
-            <ToggleRow
-              label="Producto destacado (aparece en la home)"
-              checked={isFeatured}
-              onChange={(v) => setValue("isFeatured", v, { shouldDirty: true })}
-            />
-            <Field label="Título SEO">
-              <Input {...register("seoTitle")} />
-            </Field>
-            <Field label="Meta description">
-              <Textarea rows={2} {...register("seoDescription")} />
-            </Field>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Acciones</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            {product.archived ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => archive.run(false)}
-                disabled={archive.isPending}
-              >
-                Restaurar producto
-              </Button>
-            ) : (
-              <ConfirmDialog
-                title="Archivar producto"
-                description="El producto se inactivará y dejará de mostrarse en la tienda, pero conservará su historial. Podrás restaurarlo."
-                confirmLabel="Archivar"
-                onConfirm={() => archive.run(true)}
-                trigger={
-                  <Button type="button" variant="outline">
-                    Archivar / remover
-                  </Button>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ToggleRow
+                label="Enviar a domicilio o sucursal"
+                checked={allowsShipping}
+                onChange={(v) =>
+                  setValue("allowsShipping", v, { shouldDirty: true })
                 }
               />
-            )}
-            <ConfirmDialog
-              title="Eliminar producto"
-              description="Solo se puede eliminar si nunca tuvo ventas. Si las tuvo, se archivará automáticamente para no perder los pedidos."
-              confirmLabel="Eliminar"
-              destructive
-              onConfirm={() => del.run()}
-              trigger={
-                <Button type="button" variant="danger">
-                  Eliminar
-                </Button>
-              }
-            />
-          </CardContent>
-        </Card>
+              <ToggleRow
+                label="Permitir retiro coordinado"
+                checked={allowsPickup}
+                onChange={(v) =>
+                  setValue("allowsPickup", v, { shouldDirty: true })
+                }
+              />
+            </div>
+
+            <div className="border-border rounded-xl border p-4">
+              <ToggleRow
+                label="Este producto permite personalización"
+                checked={product.isCustomizable}
+                onChange={(enabled) => customizable.run(enabled)}
+              />
+              <p className="text-foreground-muted mt-2 text-xs">
+                Agrega aquí nombres, textos, medidas o instrucciones que el
+                cliente debe completar.
+              </p>
+              <div className="mt-4">
+                <CustomFieldsSection
+                  productId={product.id}
+                  initial={customFields}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+              <Field label="Visibilidad">
+                <Select {...register("status")}>
+                  <option value="DRAFT">
+                    Borrador — solo visible en el panel
+                  </option>
+                  <option value="PUBLISHED">
+                    Publicado — visible en la tienda
+                  </option>
+                  <option value="HIDDEN">
+                    Oculto — conserva el enlace, no aparece en listados
+                  </option>
+                </Select>
+              </Field>
+              <ToggleRow
+                label="Destacar en inicio"
+                checked={isFeatured}
+                onChange={(v) =>
+                  setValue("isFeatured", v, { shouldDirty: true })
+                }
+              />
+            </div>
+
+            <details className="border-border rounded-xl border">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium">
+                SEO y buscadores (opcional)
+                <ChevronDown className="size-4" />
+              </summary>
+              <div className="space-y-4 border-t p-4">
+                <Field label="Título para Google">
+                  <Input {...register("seoTitle")} />
+                </Field>
+                <Field label="Descripción para Google">
+                  <Textarea rows={2} {...register("seoDescription")} />
+                </Field>
+              </div>
+            </details>
+
+            <details className="rounded-xl border border-red-200">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-red-700">
+                Archivar o eliminar
+                <ChevronDown className="size-4" />
+              </summary>
+              <div className="flex flex-wrap gap-2 border-t border-red-100 p-4">
+                {product.archived ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => archive.run(false)}
+                    disabled={archive.isPending}
+                  >
+                    Restaurar producto
+                  </Button>
+                ) : (
+                  <ConfirmDialog
+                    title="Archivar producto"
+                    description="El producto se inactivará y dejará de mostrarse en la tienda, pero conservará su historial. Podrás restaurarlo."
+                    confirmLabel="Archivar"
+                    onConfirm={() => archive.run(true)}
+                    trigger={
+                      <Button type="button" variant="outline">
+                        Archivar / remover
+                      </Button>
+                    }
+                  />
+                )}
+                <ConfirmDialog
+                  title="Eliminar producto"
+                  description="Solo se puede eliminar si nunca tuvo ventas. Si las tuvo, se archivará automáticamente para no perder los pedidos."
+                  confirmLabel="Eliminar"
+                  destructive
+                  onConfirm={() => del.run()}
+                  trigger={
+                    <Button type="button" variant="danger">
+                      Eliminar
+                    </Button>
+                  }
+                />
+              </div>
+            </details>
+          </div>
+        </EditorStep>
 
         <div className="border-border bg-surface/90 fixed inset-x-0 bottom-0 z-20 border-t p-3 backdrop-blur">
           <div className="mx-auto flex max-w-3xl items-center justify-end gap-3">
@@ -529,6 +612,46 @@ export function ProductEditor({
         </div>
       </form>
     </div>
+  );
+}
+
+function EditorStep({
+  id,
+  number,
+  title,
+  description,
+  complete,
+  children,
+}: {
+  id: string;
+  number: number;
+  title: string;
+  description: string;
+  complete: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      id={id}
+      className="rounded-card border-border bg-surface scroll-mt-6 border shadow-[0_8px_24px_rgba(41,39,45,.035)]"
+    >
+      <div className="border-border flex items-start gap-3 border-b px-5 py-4">
+        <span
+          className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+            complete
+              ? "bg-emerald-100 text-emerald-700"
+              : "bg-brand/10 text-brand"
+          }`}
+        >
+          {complete ? <Check className="size-4" /> : number}
+        </span>
+        <div>
+          <h2 className="font-semibold">{title}</h2>
+          <p className="text-foreground-muted mt-0.5 text-sm">{description}</p>
+        </div>
+      </div>
+      <div className="p-5">{children}</div>
+    </section>
   );
 }
 

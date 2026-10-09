@@ -73,6 +73,7 @@ export function MediaManager({
   const [media, setMedia] = useState<MediaItem[]>(initialMedia);
   const [uploading, setUploading] = useState(false);
   const [videoUrl, setVideoUrl] = useState("");
+  const [uploadAssociation, setUploadAssociation] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
@@ -120,6 +121,24 @@ export function MediaManager({
           blurDataUrl: json.blurDataUrl ?? undefined,
         });
         if (result.ok) {
+          const [associationKind, associationId = ""] =
+            uploadAssociation.split(":");
+          let variantId = associationKind === "variant" ? associationId : null;
+          let attributeValueId =
+            associationKind === "color" ? associationId : null;
+
+          if (variantId || attributeValueId) {
+            const associationResult = await setProductMediaAssociation({
+              mediaId: result.data.id,
+              variantId,
+              attributeValueId,
+            });
+            if (!associationResult.ok) {
+              toast.error(associationResult.error);
+              variantId = null;
+              attributeValueId = null;
+            }
+          }
           setMedia((m) => [
             ...m,
             {
@@ -130,8 +149,8 @@ export function MediaManager({
               posterUrl: null,
               alt: null,
               isPrimary: m.length === 0 && json.kind !== "video",
-              variantId: null,
-              attributeValueId: null,
+              variantId,
+              attributeValueId,
             },
           ]);
         } else {
@@ -192,6 +211,46 @@ export function MediaManager({
 
   return (
     <div className="space-y-4">
+      {(colors.length > 0 || variants.length > 0) && (
+        <div className="border-brand/15 bg-brand/5 rounded-xl border p-3">
+          <label
+            htmlFor="media-upload-association"
+            className="mb-1.5 block text-sm font-medium"
+          >
+            ¿Qué estás fotografiando?
+          </label>
+          <select
+            id="media-upload-association"
+            value={uploadAssociation}
+            onChange={(event) => setUploadAssociation(event.target.value)}
+            className="border-border bg-surface h-10 w-full rounded-xl border px-3 text-sm"
+          >
+            <option value="">Producto en general</option>
+            {colors.length > 0 && (
+              <optgroup label="Un color específico">
+                {colors.map((color) => (
+                  <option key={color.id} value={`color:${color.id}`}>
+                    {color.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {variants.length > 0 && (
+              <optgroup label="Una combinación exacta">
+                {variants.map((variant) => (
+                  <option key={variant.id} value={`variant:${variant.id}`}>
+                    {variant.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+          <p className="text-foreground-muted mt-1.5 text-xs">
+            Las próximas fotos quedarán asociadas automáticamente a esta opción.
+            Puedes cambiar cada una después.
+          </p>
+        </div>
+      )}
       <div
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {

@@ -41,8 +41,16 @@ export function NewProductForm({
   return (
     <form
       onSubmit={handleSubmit((v) => create.run(v))}
-      className="rounded-card border-border bg-surface space-y-5 border p-5"
+      className="rounded-card border-border bg-surface space-y-6 border p-5 shadow-[0_8px_24px_rgba(41,39,45,.035)]"
     >
+      <input type="hidden" value="DRAFT" {...register("status")} />
+      <div className="border-brand/15 bg-brand/5 rounded-xl border p-4">
+        <p className="text-sm font-semibold">Primero crea la base</p>
+        <p className="text-foreground-muted mt-1 text-sm">
+          Se guardará como borrador. En la pantalla siguiente agregarás colores,
+          fotos, medidas y opciones de entrega antes de publicarlo.
+        </p>
+      </div>
       <div className="space-y-1.5">
         <Label htmlFor="name">Nombre del producto</Label>
         <Input id="name" {...register("name")} aria-invalid={!!errors.name} />
@@ -109,15 +117,6 @@ export function NewProductForm({
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="status">Estado inicial</Label>
-        <Select id="status" {...register("status")}>
-          <option value="DRAFT">Borrador (no visible)</option>
-          <option value="PUBLISHED">Publicado</option>
-          <option value="HIDDEN">Oculto</option>
-        </Select>
-      </div>
-
       <div className="flex justify-end gap-2 pt-2">
         <Button
           type="button"
@@ -127,7 +126,7 @@ export function NewProductForm({
           Cancelar
         </Button>
         <Button type="submit" disabled={create.isPending}>
-          {create.isPending ? "Creando…" : "Crear y continuar"}
+          {create.isPending ? "Creando…" : "Crear borrador y continuar"}
         </Button>
       </div>
     </form>

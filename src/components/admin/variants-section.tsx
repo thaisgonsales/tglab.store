@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Trash2, Wand2 } from "lucide-react";
+import { Loader2, Plus, Trash2, Wand2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -132,28 +132,51 @@ export function VariantsSection({
 
   if (allAttributes.length === 0) {
     return (
-      <p className="text-foreground-muted text-sm">
-        Primero crea atributos (Color, Modelo…) en{" "}
-        <a href="/admin/atributos" className="text-brand underline">
-          Atributos
-        </a>
-        .
-      </p>
+      <div className="border-border bg-surface-muted/40 rounded-xl border border-dashed p-5 text-center">
+        <p className="text-sm font-medium">
+          ¿Tiene colores, tamaños o modelos?
+        </p>
+        <p className="text-foreground-muted mt-1 text-xs">
+          Crea la primera opción y agrega dentro todos sus valores.
+        </p>
+        <AttributeFormDialog
+          trigger={
+            <Button type="button" size="sm" className="mt-3">
+              <Plus className="size-4" /> Crear una opción
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
   return (
     <div className="space-y-5">
       <div>
-        <p className="mb-2 text-sm font-medium">
-          ¿Qué atributos tiene este producto?
-        </p>
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium">Opciones del producto</p>
+            <p className="text-foreground-muted mt-0.5 text-xs">
+              Elige Color, Tamaño o Modelo. Dentro de cada opción puedes agregar
+              todos los valores que necesites.
+            </p>
+          </div>
+          <AttributeFormDialog
+            trigger={
+              <Button type="button" size="sm" variant="outline">
+                <Plus className="size-4" /> Nueva opción
+              </Button>
+            }
+          />
+        </div>
         <div className="flex flex-wrap gap-2">
           {allAttributes.map((a) => {
             const isDuplicate = duplicateNames.has(
               a.name.toLocaleLowerCase("es-CL"),
             );
-            const valueSummary = a.values.map((value) => value.label).join(", ");
+            const valueSummary = a.values
+              .map((value) => value.label)
+              .join(", ");
 
             return (
               <button
@@ -198,7 +221,7 @@ export function VariantsSection({
           disabled={saveAttrs.isPending}
           onClick={() => saveAttrs.run({ productId, attributeIds: assigned })}
         >
-          {saveAttrs.isPending ? "Guardando…" : "Guardar atributos"}
+          {saveAttrs.isPending ? "Guardando…" : "Aplicar opciones"}
         </Button>
       </div>
 
