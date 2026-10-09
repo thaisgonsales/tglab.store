@@ -18,18 +18,20 @@ const rateSchema = z.object({
 
 const ratesResponseSchema = z.object({ data: z.array(rateSchema).default([]) });
 const labelResponseSchema = z.object({
-  data: z.array(
-    z.object({
-      carrier: z.string(),
-      service: z.string(),
-      shipmentId: z.union([z.string(), z.number()]),
-      trackingNumber: z.string().min(1),
-      trackUrl: z.string().url(),
-      label: z.string().url(),
-      totalPrice: z.union([z.string(), z.number()]),
-      currency: z.string().optional(),
-    }),
-  ).min(1),
+  data: z
+    .array(
+      z.object({
+        carrier: z.string(),
+        service: z.string(),
+        shipmentId: z.union([z.string(), z.number()]),
+        trackingNumber: z.string().min(1),
+        trackUrl: z.string().url(),
+        label: z.string().url(),
+        totalPrice: z.union([z.string(), z.number()]),
+        currency: z.string().optional(),
+      }),
+    )
+    .min(1),
 });
 const apiErrorSchema = z.object({
   meta: z.literal("error"),
@@ -146,9 +148,9 @@ export class EnviaProvider {
     const env = getEnv();
     return Boolean(
       env.ENVIA_API_TOKEN &&
-        env.ENVIA_ORIGIN_PHONE &&
-        env.ENVIA_ORIGIN_STREET &&
-        env.ENVIA_ORIGIN_POSTAL_CODE,
+      env.ENVIA_ORIGIN_PHONE &&
+      env.ENVIA_ORIGIN_STREET &&
+      env.ENVIA_ORIGIN_POSTAL_CODE,
     );
   }
 
@@ -218,16 +220,21 @@ export class EnviaProvider {
         return [];
       }
       return parsed.data.data.flatMap((rate) => {
+        const searchable = `${rate.service} ${rate.serviceDescription ?? ""}`;
+        // TG LAB despacha productos físicos, nunca documentos.
+        if (/document/i.test(searchable)) return [];
         const price = Math.round(Number(rate.totalPrice));
         if (!Number.isFinite(price) || price < 0) return [];
-        return [{
-          carrier: rate.carrier,
-          service: rate.service,
-          description: rate.serviceDescription || rate.service,
-          price,
-          currency: rate.currency || "CLP",
-          deliveryEstimate: rate.deliveryEstimate?.toString(),
-        }];
+        return [
+          {
+            carrier: rate.carrier,
+            service: rate.service,
+            description: rate.serviceDescription || rate.service,
+            price,
+            currency: rate.currency || "CLP",
+            deliveryEstimate: rate.deliveryEstimate?.toString(),
+          },
+        ];
       });
     });
   }

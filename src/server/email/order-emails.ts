@@ -14,7 +14,7 @@ import { sendEmail } from "@/server/email/send";
 import { getSettingsGroup } from "@/server/services/settings-service";
 
 const SUBJECTS: Record<OrderEmailKind, string> = {
-  received: "Recibimos tu pedido",
+  received: "Pedido creado — pago pendiente",
   paid: "Pago confirmado",
   preparing: "Estamos preparando tu pedido",
   ready_for_pickup: "Tu pedido está listo para retiro",

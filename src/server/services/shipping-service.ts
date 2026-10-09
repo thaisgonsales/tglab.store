@@ -196,10 +196,17 @@ export async function getShippingOptions(
     }
   }
 
-  // Ordena por precio ascendente y deduplica por (nombre, precio).
+  // Ordena por precio. Para no abrumar al cliente, Envia muestra únicamente
+  // la alternativa más económica de cada transportista.
   options.sort((a, b) => a.price - b.price);
   const seen = new Set<string>();
+  const seenEnviaCarriers = new Set<string>();
   return options.filter((o) => {
+    if (o.zoneId === "envia") {
+      const carrier = o.zoneName.toLocaleLowerCase("es-CL");
+      if (seenEnviaCarriers.has(carrier)) return false;
+      seenEnviaCarriers.add(carrier);
+    }
     const key = `${o.name}|${o.price}`;
     if (seen.has(key)) return false;
     seen.add(key);

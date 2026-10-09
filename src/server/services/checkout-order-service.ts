@@ -284,9 +284,9 @@ export async function createOrder(
     if (!customerSession) await rememberGuestOrder(order.id);
     revalidatePath("/", "layout");
 
-    const { sendOrderReceivedEmail } =
-      await import("@/server/email/order-emails");
-    await sendOrderReceivedEmail(order.id);
+    // Crear el pedido solo reserva stock y permite iniciar el pago. No se
+    // envía una confirmación al cliente hasta que el proveedor confirme el
+    // dinero; así un intento rechazado no parece una compra realizada.
 
     return {
       ok: true,

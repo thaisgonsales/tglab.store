@@ -69,6 +69,8 @@ export function CheckoutForm({
   const router = useRouter();
   const [quote, setQuote] = useState<Quote>(initialQuote);
   const [quoting, setQuoting] = useState(false);
+  const [completedQuoteKey, setCompletedQuoteKey] = useState("");
+  const [quoteError, setQuoteError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const submitting = useRef(false);
   const idempotencyKey = useRef<string>("");
@@ -119,6 +121,24 @@ export function CheckoutForm({
   const number = watch("number");
   const addressNotes = watch("addressNotes");
   const acceptedPersonalizedTerms = watch("acceptedPersonalizedTerms");
+  const quoteKey = JSON.stringify([
+    method,
+    region,
+    comuna,
+    rateId,
+    couponCode,
+    emailValue,
+    firstName,
+    lastName,
+    phone,
+    street,
+    number,
+    addressNotes,
+  ]);
+  const shippingQuotePending =
+    method === "SHIPPING" &&
+    Boolean(region && comuna) &&
+    completedQuoteKey !== quoteKey;
   const hasPersonalizedLines = quote.lines.some((line) => line.isPersonalized);
   const selectedShipping =
     quote.shippingOptions.find((option) => option.rateId === rateId) ??
@@ -143,14 +163,21 @@ export function CheckoutForm({
         shippingRateId: rateId || undefined,
         couponCode: couponCode || undefined,
         customerEmail: emailValue?.includes("@") ? emailValue : undefined,
-        customerName: `${firstName ?? ""} ${lastName ?? ""}`.trim() || undefined,
+        customerName:
+          `${firstName ?? ""} ${lastName ?? ""}`.trim() || undefined,
         customerPhone: phone || undefined,
         street: street || undefined,
         number: number || undefined,
         addressNotes: addressNotes || undefined,
       });
       if (!cancelled) {
-        if (res.ok) setQuote(res.data);
+        if (res.ok) {
+          setQuote(res.data);
+          setQuoteError(null);
+        } else {
+          setQuoteError(res.error);
+        }
+        setCompletedQuoteKey(quoteKey);
         setQuoting(false);
       }
     }, 350);
@@ -171,6 +198,7 @@ export function CheckoutForm({
     street,
     number,
     addressNotes,
+    quoteKey,
   ]);
 
   async function onSubmit(values: CheckoutFormValues) {
@@ -359,11 +387,24 @@ export function CheckoutForm({
               {/* Opciones de despacho */}
               <div className="sm:col-span-2">
                 <Label>Opción de despacho</Label>
-                {quote.shippingOptions.length === 0 ? (
+                {!region || !comuna ? (
+                  <p className="text-foreground-muted mt-1 text-sm">
+                    Elige región y comuna para ver las opciones.
+                  </p>
+                ) : shippingQuotePending || quoting ? (
+                  <div className="text-foreground-muted mt-3 flex items-center gap-2 text-sm">
+                    <Loader2 className="size-4 animate-spin" />
+                    Consultando empresas de transporte y calculando precios…
+                  </div>
+                ) : quoteError ? (
                   <p className="mt-1 text-sm text-amber-700">
-                    {region && comuna
-                      ? "No hay despacho para esa comuna. Prueba con retiro o contáctanos."
-                      : "Elige región y comuna para ver las opciones."}
+                    No pudimos consultar los despachos en este momento. Revisa
+                    los datos o inténtalo nuevamente.
+                  </p>
+                ) : quote.shippingOptions.length === 0 ? (
+                  <p className="mt-1 text-sm text-amber-700">
+                    No hay despacho disponible para esa comuna. Prueba con
+                    retiro o contáctanos.
                   </p>
                 ) : (
                   <div className="mt-2 space-y-2">
@@ -516,17 +557,21 @@ export function CheckoutForm({
             value={
               method === "PICKUP"
                 ? "Retiro (gratis)"
-                : quote.selectedShipping
-                  ? quote.shippingTotal === 0
-                    ? "Gratis"
-                    : formatCLP(quote.shippingTotal)
-                  : "Por calcular"
+                : shippingQuotePending || quoting
+                  ? "Calculando…"
+                  : quote.selectedShipping
+                    ? quote.shippingTotal === 0
+                      ? "Gratis"
+                      : formatCLP(quote.shippingTotal)
+                    : "Por calcular"
             }
           />
           <div className="border-border mt-2 flex justify-between border-t pt-2 text-base font-semibold">
             <dt>Total</dt>
             <dd className="tabular-nums">
-              {quoting ? "…" : formatCLP(quote.grandTotal)}
+              {shippingQuotePending || quoting
+                ? "Calculando…"
+                : formatCLP(quote.grandTotal)}
             </dd>
           </div>
         </dl>

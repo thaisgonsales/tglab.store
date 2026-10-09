@@ -50,7 +50,7 @@ export type OrderEmailData = {
 };
 
 const HEADINGS: Record<OrderEmailKind, string> = {
-  received: "Recibimos tu pedido",
+  received: "Pedido creado — pago pendiente",
   paid: "¡Pago confirmado!",
   preparing: "Estamos preparando tu pedido",
   ready_for_pickup: "Tu pedido está listo para retiro",
@@ -63,8 +63,8 @@ function intro(d: OrderEmailData): string {
   switch (d.kind) {
     case "received":
       return d.bankInstructions
-        ? "Guardamos tu pedido. Para confirmarlo necesitamos que completes el pago."
-        : "Guardamos tu pedido y te avisaremos cuando se confirme el pago.";
+        ? "Este pedido todavía no está pagado ni confirmado. Lo guardamos temporalmente mientras completas el pago."
+        : "Este pedido todavía no está pagado ni confirmado. Te avisaremos solamente si el pago se confirma.";
     case "paid":
       return "Recibimos tu pago. Ya estamos organizando la preparación.";
     case "preparing":
