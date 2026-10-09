@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useAction } from "@/lib/use-action";
 import {
+  addProductColor,
   deleteVariant,
   generateVariants,
   setProductAttributes,
@@ -50,6 +51,9 @@ export function VariantsSection({
 }) {
   const router = useRouter();
   const [assigned, setAssigned] = useState<string[]>(assignedAttributeIds);
+  const [showColorForm, setShowColorForm] = useState(false);
+  const [colorName, setColorName] = useState("");
+  const [colorHex, setColorHex] = useState("#e88bab");
   const [selection, setSelection] = useState<Record<string, string[]>>(() => {
     const init: Record<string, string[]> = {};
     for (const a of allAttributes) {
@@ -73,16 +77,53 @@ export function VariantsSection({
   const generate = useAction(generateVariants, {
     onSuccess: () => router.refresh(),
   });
+  const addColor = useAction(addProductColor, {
+    successMessage: "Color agregado. Ya puedes subir sus fotos.",
+    onSuccess: (result) => {
+      setAssigned((current) =>
+        current.includes(result.attributeId)
+          ? current
+          : [...current, result.attributeId],
+      );
+      setColorName("");
+      setShowColorForm(false);
+      router.refresh();
+    },
+  });
 
   const assignedAttrs = useMemo(
     () => allAttributes.filter((a) => assigned.includes(a.id)),
     [allAttributes, assigned],
   );
+  const genericAttributes = useMemo(
+    () => allAttributes.filter((attribute) => attribute.type !== "COLOR"),
+    [allAttributes],
+  );
+  const hasAdvancedOptions = assignedAttrs.some(
+    (attribute) => attribute.type !== "COLOR",
+  );
+  const activeColors = useMemo(
+    () =>
+      assignedAttrs
+        .filter((attribute) => attribute.type === "COLOR")
+        .flatMap((attribute) =>
+          attribute.values.filter((value) =>
+            variants.some((variant) =>
+              variant.optionLabels.some(
+                (option) =>
+                  option.attribute === attribute.name &&
+                  option.value === value.label,
+              ),
+            ),
+          ),
+        ),
+    [assignedAttrs, variants],
+  );
   const duplicateNames = new Set(
-    allAttributes
+    genericAttributes
       .filter(
         (attribute, index) =>
-          allAttributes.findIndex(
+          genericAttributes.findIndex(
             (candidate) =>
               candidate.name.toLocaleLowerCase("es-CL") ===
               attribute.name.toLocaleLowerCase("es-CL"),
@@ -130,102 +171,201 @@ export function VariantsSection({
     }
   }
 
-  if (allAttributes.length === 0) {
-    return (
-      <div className="border-border bg-surface-muted/40 rounded-xl border border-dashed p-5 text-center">
-        <p className="text-sm font-medium">
-          ¿Tiene colores, tamaños o modelos?
-        </p>
-        <p className="text-foreground-muted mt-1 text-xs">
-          Crea la primera opción y agrega dentro todos sus valores.
-        </p>
-        <AttributeFormDialog
-          trigger={
-            <Button type="button" size="sm" className="mt-3">
-              <Plus className="size-4" /> Crear una opción
-            </Button>
-          }
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-5">
-      <div>
-        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+      <div className="border-border rounded-xl border p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-medium">Opciones del producto</p>
+            <p className="text-sm font-semibold">Colores del producto</p>
             <p className="text-foreground-muted mt-0.5 text-xs">
-              Elige Color, Tamaño o Modelo. Dentro de cada opción puedes agregar
-              todos los valores que necesites.
+              Cada color tendrá su propio stock, precio y grupo de fotos.
             </p>
           </div>
-          <AttributeFormDialog
-            trigger={
-              <Button type="button" size="sm" variant="outline">
-                <Plus className="size-4" /> Nueva opción
-              </Button>
-            }
-          />
+          {!showColorForm && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setShowColorForm(true)}
+            >
+              <Plus className="size-4" /> Agregar color
+            </Button>
+          )}
         </div>
-        <div className="flex flex-wrap gap-2">
-          {allAttributes.map((a) => {
-            const isDuplicate = duplicateNames.has(
-              a.name.toLocaleLowerCase("es-CL"),
-            );
-            const valueSummary = a.values
-              .map((value) => value.label)
-              .join(", ");
 
-            return (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => toggleAttr(a.id)}
-                aria-pressed={assigned.includes(a.id)}
-                className={`inline-flex min-h-10 flex-col items-start justify-center rounded-xl border px-3 py-1.5 text-left text-sm ${
-                  assigned.includes(a.id)
-                    ? "border-brand bg-brand text-brand-fg"
-                    : "border-border hover:bg-surface-muted"
-                }`}
+        {activeColors.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {activeColors.map((color) => (
+              <span
+                key={color.id}
+                className="border-border inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm"
               >
-                <span>{a.name}</span>
-                {isDuplicate && (
-                  <span
-                    className={`max-w-56 truncate text-[11px] ${
-                      assigned.includes(a.id)
-                        ? "text-brand-fg/80"
-                        : "text-foreground-muted"
-                    }`}
-                  >
-                    {valueSummary || "Sin valores"}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        {duplicateNames.size > 0 && (
-          <p className="mt-2 text-xs text-amber-700">
-            Hay atributos repetidos. Debajo de cada “Color” ahora aparecen sus
-            valores para que puedas distinguirlos. Conserva uno, agrega allí
-            todos los colores y después desmarca el duplicado.
+                <span
+                  className="size-4 rounded-full border border-black/10"
+                  style={{ backgroundColor: color.hex || "#d4d4d4" }}
+                />
+                {color.label}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {activeColors.length === 0 && !showColorForm && (
+          <p className="text-foreground-muted mt-3 text-sm">
+            Este producto todavía no tiene colores. Si solo existe en una
+            versión, puedes dejarlo así.
           </p>
         )}
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="mt-3"
-          disabled={saveAttrs.isPending}
-          onClick={() => saveAttrs.run({ productId, attributeIds: assigned })}
-        >
-          {saveAttrs.isPending ? "Guardando…" : "Aplicar opciones"}
-        </Button>
+
+        {showColorForm && (
+          <div className="border-border bg-surface-muted/40 mt-4 rounded-xl border p-4">
+            <p className="text-sm font-medium">Nuevo color</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+              <label className="text-sm">
+                <span className="mb-1 block">Nombre</span>
+                <Input
+                  value={colorName}
+                  onChange={(event) => setColorName(event.target.value)}
+                  placeholder="Ej.: Rosado"
+                  maxLength={60}
+                  autoFocus
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block">Bolita</span>
+                <span className="border-border flex h-10 items-center gap-2 rounded-md border bg-white px-2">
+                  <input
+                    type="color"
+                    value={colorHex}
+                    onChange={(event) => setColorHex(event.target.value)}
+                    className="size-7 cursor-pointer border-0 bg-transparent p-0"
+                    aria-label="Elegir color de la bolita"
+                  />
+                  <span className="text-foreground-muted text-xs uppercase">
+                    {colorHex}
+                  </span>
+                </span>
+              </label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={addColor.isPending || colorName.trim().length === 0}
+                  onClick={() =>
+                    addColor.run({
+                      productId,
+                      label: colorName,
+                      hex: colorHex,
+                    })
+                  }
+                >
+                  {addColor.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    "Crear color"
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={addColor.isPending}
+                  onClick={() => setShowColorForm(false)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+            <p className="text-foreground-muted mt-2 text-xs">
+              Al crearlo aparecerá abajo una fila para su precio y stock, y en
+              “Fotos y videos” un bloque exclusivo para sus imágenes.
+            </p>
+          </div>
+        )}
       </div>
 
-      {assignedAttrs.length > 0 && (
+      <details className="border-border rounded-xl border p-4">
+        <summary className="cursor-pointer text-sm font-medium">
+          Tamaños, modelos y otras opciones (avanzado)
+        </summary>
+        <div className="mt-4">
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium">Otras opciones</p>
+              <p className="text-foreground-muted mt-0.5 text-xs">
+                Usa esta sección si el producto también cambia por tamaño,
+                modelo u otra característica.
+              </p>
+            </div>
+            <AttributeFormDialog
+              trigger={
+                <Button type="button" size="sm" variant="outline">
+                  <Plus className="size-4" /> Nueva opción
+                </Button>
+              }
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {genericAttributes.map((a) => {
+              const isDuplicate = duplicateNames.has(
+                a.name.toLocaleLowerCase("es-CL"),
+              );
+              const valueSummary = a.values
+                .map((value) => value.label)
+                .join(", ");
+
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => toggleAttr(a.id)}
+                  aria-pressed={assigned.includes(a.id)}
+                  className={`inline-flex min-h-10 flex-col items-start justify-center rounded-xl border px-3 py-1.5 text-left text-sm ${
+                    assigned.includes(a.id)
+                      ? "border-brand bg-brand text-brand-fg"
+                      : "border-border hover:bg-surface-muted"
+                  }`}
+                >
+                  <span>{a.name}</span>
+                  {isDuplicate && (
+                    <span
+                      className={`max-w-56 truncate text-[11px] ${
+                        assigned.includes(a.id)
+                          ? "text-brand-fg/80"
+                          : "text-foreground-muted"
+                      }`}
+                    >
+                      {valueSummary || "Sin valores"}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          {duplicateNames.size > 0 && (
+            <p className="mt-2 text-xs text-amber-700">
+              Hay opciones avanzadas repetidas. Conserva una sola y desmarca el
+              duplicado.
+            </p>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="mt-3"
+            disabled={saveAttrs.isPending}
+            onClick={() => saveAttrs.run({ productId, attributeIds: assigned })}
+          >
+            {saveAttrs.isPending ? "Guardando…" : "Aplicar opciones"}
+          </Button>
+          {genericAttributes.length === 0 && (
+            <p className="text-foreground-muted mt-3 text-xs">
+              Aún no hay opciones avanzadas creadas.
+            </p>
+          )}
+        </div>
+      </details>
+
+      {hasAdvancedOptions && (
         <div className="border-border rounded-md border p-4">
           <p className="mb-3 text-sm font-medium">
             Elige los valores disponibles para este producto

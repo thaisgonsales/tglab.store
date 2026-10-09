@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import { slugify } from "@/lib/slug";
-import type { z } from "zod";
 
 import {
   generateVariantsSchema,
@@ -14,11 +14,38 @@ import { buildOptionsKey, cartesian } from "@/lib/variant-key";
 import { ActionError, staffAction } from "@/server/auth/action-guard";
 import { db } from "@/server/db";
 import { recordMovement } from "@/server/services/inventory-service";
+import {
+  addColorToProduct,
+  ProductColorError,
+} from "@/server/services/product-color-service";
+
+const addProductColorSchema = z.object({
+  productId: z.string().cuid(),
+  label: z.string().trim().min(1, "Escribe el nombre del color.").max(60),
+  hex: z.string().regex(/^#[0-9a-fA-F]{6}$/, "El color no es válido."),
+});
 
 function revalidate(productId: string) {
   revalidatePath(`/admin/productos/${productId}`);
   revalidatePath("/productos");
   revalidatePath("/", "layout");
+}
+
+/** Crea un color, su variante de venta y la asociación usada por sus fotos. */
+export async function addProductColor(input: unknown) {
+  return staffAction(async () => {
+    const data = addProductColorSchema.parse(input);
+    try {
+      const result = await addColorToProduct(data);
+      revalidate(data.productId);
+      return result;
+    } catch (error) {
+      if (error instanceof ProductColorError) {
+        throw new ActionError(error.message);
+      }
+      throw error;
+    }
+  });
 }
 
 /** Define qué atributos usa el producto (Color, Modelo…). */
