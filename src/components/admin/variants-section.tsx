@@ -124,8 +124,8 @@ export function VariantsSection({
       const { toast } = await import("sonner");
       toast.success(
         res.data.created > 0
-          ? `${res.data.created} combinación(es) creada(s)`
-          : "No hay combinaciones nuevas",
+          ? `${res.data.created} opción(es) de venta creada(s)`
+          : "Las opciones ya estaban creadas",
       );
     }
   }
@@ -228,7 +228,11 @@ export function VariantsSection({
       {assignedAttrs.length > 0 && (
         <div className="border-border rounded-md border p-4">
           <p className="mb-3 text-sm font-medium">
-            Elige los valores y genera las combinaciones
+            Elige los valores disponibles para este producto
+          </p>
+          <p className="text-foreground-muted -mt-2 mb-3 text-xs">
+            Por ejemplo, marca Rosado y Verde. Al crear las opciones aparecerá
+            una tarjeta de fotos para cada color en el paso siguiente.
           </p>
           <div className="space-y-3">
             {assignedAttrs.map((a) => (
@@ -288,10 +292,10 @@ export function VariantsSection({
               ) : (
                 <Wand2 className="size-4" />
               )}
-              Generar {comboCount > 0 ? `${comboCount} ` : ""}combinaciones
+              Crear {comboCount > 0 ? `${comboCount} ` : ""}opciones de venta
             </Button>
             <span className="text-foreground-muted text-xs">
-              Las combinaciones existentes se conservan.
+              Las opciones que ya existen se conservan.
             </span>
           </div>
         </div>
@@ -302,7 +306,7 @@ export function VariantsSection({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border bg-surface-muted text-foreground-muted border-b text-left text-xs uppercase">
-                <th className="p-2">Combinación</th>
+                <th className="p-2">Opción</th>
                 <th className="p-2">SKU</th>
                 <th className="p-2">Precio</th>
                 <th className="p-2">Oferta</th>

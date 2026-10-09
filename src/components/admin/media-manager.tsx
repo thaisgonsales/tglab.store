@@ -17,6 +17,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   GripVertical,
+  ImageIcon,
   Loader2,
   Play,
   Star,
@@ -209,46 +210,99 @@ export function MediaManager({
     }
   }
 
+  function chooseUploadTarget(association: string) {
+    setUploadAssociation(association);
+    fileRef.current?.click();
+  }
+
+  const generalMedia = media.filter(
+    (item) => !item.attributeValueId && !item.variantId,
+  );
+  const colorGroups = colors.map((color) => ({
+    key: `color:${color.id}`,
+    title: color.label,
+    hex: color.hex,
+    items: media.filter((item) => item.attributeValueId === color.id),
+  }));
+  const variantGroups = variants
+    .map((variant) => ({
+      key: `variant:${variant.id}`,
+      title: variant.label,
+      items: media.filter((item) => item.variantId === variant.id),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  const selectedColor = colors.find(
+    (color) => uploadAssociation === `color:${color.id}`,
+  );
+  const uploadTargetLabel = selectedColor
+    ? `del color ${selectedColor.label}`
+    : uploadAssociation.startsWith("variant:")
+      ? "de la combinación seleccionada"
+      : "generales del producto";
+
   return (
     <div className="space-y-4">
-      {(colors.length > 0 || variants.length > 0) && (
-        <div className="border-brand/15 bg-brand/5 rounded-xl border p-3">
-          <label
-            htmlFor="media-upload-association"
-            className="mb-1.5 block text-sm font-medium"
-          >
-            ¿Qué estás fotografiando?
-          </label>
-          <select
-            id="media-upload-association"
-            value={uploadAssociation}
-            onChange={(event) => setUploadAssociation(event.target.value)}
-            className="border-border bg-surface h-10 w-full rounded-xl border px-3 text-sm"
-          >
-            <option value="">Producto en general</option>
-            {colors.length > 0 && (
-              <optgroup label="Un color específico">
-                {colors.map((color) => (
-                  <option key={color.id} value={`color:${color.id}`}>
-                    {color.label}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            {variants.length > 0 && (
-              <optgroup label="Una combinación exacta">
-                {variants.map((variant) => (
-                  <option key={variant.id} value={`variant:${variant.id}`}>
-                    {variant.label}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-          </select>
-          <p className="text-foreground-muted mt-1.5 text-xs">
-            Las próximas fotos quedarán asociadas automáticamente a esta opción.
-            Puedes cambiar cada una después.
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*,video/mp4,video/webm"
+        multiple
+        className="hidden"
+        onChange={(e) => e.target.files && handleFiles(e.target.files)}
+      />
+
+      {colors.length > 0 && (
+        <div>
+          <p className="text-sm font-semibold">Fotos por color</p>
+          <p className="text-foreground-muted mt-1 text-xs">
+            Entra al color correspondiente para subir sus fotos. El cliente verá
+            esas imágenes cuando seleccione la bolita de ese color.
           </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => chooseUploadTarget("")}
+              disabled={uploading}
+              className="border-border hover:border-brand/40 bg-surface flex items-center gap-3 rounded-xl border p-3 text-left"
+            >
+              <span className="bg-surface-muted flex size-10 items-center justify-center rounded-full">
+                <ImageIcon className="text-foreground-muted size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium">
+                  Fotos generales
+                </span>
+                <span className="text-foreground-muted block text-xs">
+                  {generalMedia.length} archivo(s) · Subir fotos
+                </span>
+              </span>
+              <Upload className="text-brand size-4" />
+            </button>
+            {colorGroups.map((group) => (
+              <button
+                key={group.key}
+                type="button"
+                onClick={() => chooseUploadTarget(group.key)}
+                disabled={uploading}
+                className="border-border hover:border-brand/40 bg-surface flex items-center gap-3 rounded-xl border p-3 text-left"
+              >
+                <span
+                  className="size-10 shrink-0 rounded-full border border-black/10 shadow-inner"
+                  style={{ backgroundColor: group.hex ?? "#d1d5db" }}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">
+                    {group.title}
+                  </span>
+                  <span className="text-foreground-muted block text-xs">
+                    {group.items.length} foto(s) · Subir fotos de {group.title}
+                  </span>
+                </span>
+                <Upload className="text-brand size-4" />
+              </button>
+            ))}
+          </div>
         </div>
       )}
       <div
@@ -260,17 +314,12 @@ export function MediaManager({
         }}
         className="rounded-card border-border border border-dashed p-6 text-center"
       >
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*,video/mp4,video/webm"
-          multiple
-          className="hidden"
-          onChange={(e) => e.target.files && handleFiles(e.target.files)}
-        />
         <Upload className="text-foreground-muted mx-auto size-6" />
-        <p className="text-foreground-muted mt-2 text-sm">
-          Arrastra imágenes o videos aquí, o
+        <p className="mt-2 text-sm font-medium">
+          Subir fotos {uploadTargetLabel}
+        </p>
+        <p className="text-foreground-muted mt-1 text-xs">
+          Arrastra los archivos aquí o elígelos desde tu computador.
         </p>
         <Button
           type="button"
@@ -285,7 +334,7 @@ export function MediaManager({
               <Loader2 className="size-4 animate-spin" /> Subiendo…
             </>
           ) : (
-            "Elegir archivos"
+            `Elegir fotos ${uploadTargetLabel}`
           )}
         </Button>
         <p className="text-foreground-muted mt-2 text-xs">
@@ -303,37 +352,105 @@ export function MediaManager({
             items={media.map((m) => m.id)}
             strategy={rectSortingStrategy}
           >
-            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {media.map((item) => (
-                <SortableMedia
-                  key={item.id}
-                  item={item}
-                  onDelete={() => handleDelete(item.id)}
-                  onPrimary={() => handlePrimary(item.id)}
-                  variants={variants}
-                  colors={colors}
-                  onAssociationChange={async (association) => {
-                    const [kind, id = ""] = association.split(":");
-                    const variantId = kind === "variant" ? id : null;
-                    const attributeValueId = kind === "color" ? id : null;
-                    const result = await assignMedia.run({
-                      mediaId: item.id,
-                      variantId,
-                      attributeValueId,
-                    });
-                    if (result.ok) {
-                      setMedia((current) =>
-                        current.map((entry) =>
-                          entry.id === item.id
-                            ? { ...entry, variantId, attributeValueId }
-                            : entry,
-                        ),
-                      );
-                    }
-                  }}
-                />
+            <div className="space-y-5">
+              {[
+                {
+                  key: "general",
+                  title: "Fotos generales",
+                  hex: null,
+                  items: generalMedia,
+                },
+                ...colorGroups,
+              ]
+                .filter((group) => group.items.length > 0)
+                .map((group) => (
+                  <section key={group.key} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      {group.hex && (
+                        <span
+                          className="size-4 rounded-full border border-black/10"
+                          style={{ backgroundColor: group.hex }}
+                        />
+                      )}
+                      <h3 className="text-sm font-semibold">{group.title}</h3>
+                      <span className="text-foreground-muted text-xs">
+                        {group.items.length}
+                      </span>
+                    </div>
+                    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                      {group.items.map((item) => (
+                        <SortableMedia
+                          key={item.id}
+                          item={item}
+                          onDelete={() => handleDelete(item.id)}
+                          onPrimary={() => handlePrimary(item.id)}
+                          variants={variants}
+                          colors={colors}
+                          onAssociationChange={async (association) => {
+                            const [kind, id = ""] = association.split(":");
+                            const variantId = kind === "variant" ? id : null;
+                            const attributeValueId =
+                              kind === "color" ? id : null;
+                            const result = await assignMedia.run({
+                              mediaId: item.id,
+                              variantId,
+                              attributeValueId,
+                            });
+                            if (result.ok) {
+                              setMedia((current) =>
+                                current.map((entry) =>
+                                  entry.id === item.id
+                                    ? { ...entry, variantId, attributeValueId }
+                                    : entry,
+                                ),
+                              );
+                            }
+                          }}
+                        />
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+
+              {variantGroups.map((group) => (
+                <section key={group.key} className="space-y-2">
+                  <h3 className="text-sm font-semibold">
+                    Combinación: {group.title}
+                  </h3>
+                  <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                    {group.items.map((item) => (
+                      <SortableMedia
+                        key={item.id}
+                        item={item}
+                        onDelete={() => handleDelete(item.id)}
+                        onPrimary={() => handlePrimary(item.id)}
+                        variants={variants}
+                        colors={colors}
+                        onAssociationChange={async (association) => {
+                          const [kind, id = ""] = association.split(":");
+                          const variantId = kind === "variant" ? id : null;
+                          const attributeValueId = kind === "color" ? id : null;
+                          const result = await assignMedia.run({
+                            mediaId: item.id,
+                            variantId,
+                            attributeValueId,
+                          });
+                          if (result.ok) {
+                            setMedia((current) =>
+                              current.map((entry) =>
+                                entry.id === item.id
+                                  ? { ...entry, variantId, attributeValueId }
+                                  : entry,
+                              ),
+                            );
+                          }
+                        }}
+                      />
+                    ))}
+                  </ul>
+                </section>
               ))}
-            </ul>
+            </div>
           </SortableContext>
         </DndContext>
       )}
