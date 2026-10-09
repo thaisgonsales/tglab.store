@@ -149,26 +149,45 @@ export function VariantsSection({
           ¿Qué atributos tiene este producto?
         </p>
         <div className="flex flex-wrap gap-2">
-          {allAttributes.map((a) => (
-            <button
-              key={a.id}
-              type="button"
-              onClick={() => toggleAttr(a.id)}
-              className={`rounded-full border px-3 py-1 text-sm ${
-                assigned.includes(a.id)
-                  ? "border-brand bg-brand text-brand-fg"
-                  : "border-border hover:bg-surface-muted"
-              }`}
-            >
-              {a.name}
-            </button>
-          ))}
+          {allAttributes.map((a) => {
+            const isDuplicate = duplicateNames.has(
+              a.name.toLocaleLowerCase("es-CL"),
+            );
+            const valueSummary = a.values.map((value) => value.label).join(", ");
+
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => toggleAttr(a.id)}
+                aria-pressed={assigned.includes(a.id)}
+                className={`inline-flex min-h-10 flex-col items-start justify-center rounded-xl border px-3 py-1.5 text-left text-sm ${
+                  assigned.includes(a.id)
+                    ? "border-brand bg-brand text-brand-fg"
+                    : "border-border hover:bg-surface-muted"
+                }`}
+              >
+                <span>{a.name}</span>
+                {isDuplicate && (
+                  <span
+                    className={`max-w-56 truncate text-[11px] ${
+                      assigned.includes(a.id)
+                        ? "text-brand-fg/80"
+                        : "text-foreground-muted"
+                    }`}
+                  >
+                    {valueSummary || "Sin valores"}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
         {duplicateNames.size > 0 && (
           <p className="mt-2 text-xs text-amber-700">
-            Hay atributos repetidos. Usa un solo atributo “Color” y agrega
-            dentro Verde, Rosado y los demás colores; después desmarca el
-            duplicado.
+            Hay atributos repetidos. Debajo de cada “Color” ahora aparecen sus
+            valores para que puedas distinguirlos. Conserva uno, agrega allí
+            todos los colores y después desmarca el duplicado.
           </p>
         )}
         <Button
