@@ -37,9 +37,11 @@ const NAV = [
 export function AdminSidebar({
   owner,
   labels,
+  onNavigate,
 }: {
   owner: boolean;
   labels: { security: string; team: string };
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
 
@@ -59,8 +61,9 @@ export function AdminSidebar({
           <Link
             key={item.href}
             href={item.href}
+            onClick={onNavigate}
             className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+              "flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
               active
                 ? "bg-brand text-brand-fg"
                 : "text-foreground-muted hover:bg-surface-muted hover:text-foreground",

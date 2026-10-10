@@ -93,75 +93,127 @@ export default async function AdminOrdersPage({
           No hay pedidos.
         </p>
       ) : (
-        <div className="rounded-card border-border overflow-x-auto border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-border bg-surface-muted text-foreground-muted border-b text-left text-xs uppercase">
-                <th className="p-3">Pedido</th>
-                <th className="p-3">Cliente</th>
-                <th className="p-3">Estado</th>
-                <th className="p-3">Pago</th>
-                <th className="p-3">Fecha</th>
-                <th className="p-3 text-right">Total</th>
-                <th className="p-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {result.items.map((o) => (
-                <tr key={o.id} className="border-border border-b last:border-0">
-                  <td className="p-3 font-medium">
-                    <Link
-                      href={`/admin/pedidos/${o.id}`}
-                      className="hover:text-brand"
-                    >
-                      {o.number}
-                    </Link>
-                    <span className="text-foreground-muted block text-xs">
-                      {o._count.items} ítem(s) ·{" "}
-                      {o.fulfillmentMethod === "PICKUP" ? "retiro" : "despacho"}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    {o.firstName} {o.lastName}
-                    <span className="text-foreground-muted block text-xs">
-                      {o.email}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <Badge variant="outline">{ORDER_LABEL[o.status]}</Badge>
-                  </td>
-                  <td className="p-3">
-                    <Badge
-                      variant={
-                        o.paymentStatus === "PAID"
-                          ? "success"
-                          : o.paymentStatus === "PENDING"
-                            ? "warning"
-                            : "neutral"
-                      }
-                    >
-                      {PAYMENT_LABEL[o.paymentStatus]}
-                    </Badge>
-                  </td>
-                  <td className="text-foreground-muted p-3">
-                    {formatDateTime(o.createdAt)}
-                  </td>
-                  <td className="p-3 text-right tabular-nums">
+        <>
+          <div className="space-y-3 md:hidden">
+            {result.items.map((o) => (
+              <Link
+                key={o.id}
+                href={`/admin/pedidos/${o.id}`}
+                className="rounded-card border-border bg-surface active:bg-surface-muted block border p-4 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold">{o.number}</p>
+                    <p className="truncate text-sm">
+                      {o.firstName} {o.lastName}
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-semibold tabular-nums">
                     {formatCLP(o.grandTotal)}
-                  </td>
-                  <td className="p-3 text-right">
-                    <Link
-                      href={`/admin/pedidos/${o.id}`}
-                      className="text-brand text-sm font-medium hover:underline"
-                    >
-                      Gestionar
-                    </Link>
-                  </td>
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Badge variant="outline">{ORDER_LABEL[o.status]}</Badge>
+                  <Badge
+                    variant={
+                      o.paymentStatus === "PAID"
+                        ? "success"
+                        : o.paymentStatus === "PENDING"
+                          ? "warning"
+                          : "neutral"
+                    }
+                  >
+                    {PAYMENT_LABEL[o.paymentStatus]}
+                  </Badge>
+                </div>
+                <div className="text-foreground-muted mt-3 flex justify-between gap-3 text-xs">
+                  <span>
+                    {o._count.items} ítem(s) ·{" "}
+                    {o.fulfillmentMethod === "PICKUP" ? "retiro" : "despacho"}
+                  </span>
+                  <span>{formatDateTime(o.createdAt)}</span>
+                </div>
+                <p className="text-brand mt-3 text-right text-sm font-semibold">
+                  Gestionar pedido →
+                </p>
+              </Link>
+            ))}
+          </div>
+          <div className="rounded-card border-border hidden overflow-x-auto border md:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-border bg-surface-muted text-foreground-muted border-b text-left text-xs uppercase">
+                  <th className="p-3">Pedido</th>
+                  <th className="p-3">Cliente</th>
+                  <th className="p-3">Estado</th>
+                  <th className="p-3">Pago</th>
+                  <th className="p-3">Fecha</th>
+                  <th className="p-3 text-right">Total</th>
+                  <th className="p-3" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {result.items.map((o) => (
+                  <tr
+                    key={o.id}
+                    className="border-border border-b last:border-0"
+                  >
+                    <td className="p-3 font-medium">
+                      <Link
+                        href={`/admin/pedidos/${o.id}`}
+                        className="hover:text-brand"
+                      >
+                        {o.number}
+                      </Link>
+                      <span className="text-foreground-muted block text-xs">
+                        {o._count.items} ítem(s) ·{" "}
+                        {o.fulfillmentMethod === "PICKUP"
+                          ? "retiro"
+                          : "despacho"}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      {o.firstName} {o.lastName}
+                      <span className="text-foreground-muted block text-xs">
+                        {o.email}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <Badge variant="outline">{ORDER_LABEL[o.status]}</Badge>
+                    </td>
+                    <td className="p-3">
+                      <Badge
+                        variant={
+                          o.paymentStatus === "PAID"
+                            ? "success"
+                            : o.paymentStatus === "PENDING"
+                              ? "warning"
+                              : "neutral"
+                        }
+                      >
+                        {PAYMENT_LABEL[o.paymentStatus]}
+                      </Badge>
+                    </td>
+                    <td className="text-foreground-muted p-3">
+                      {formatDateTime(o.createdAt)}
+                    </td>
+                    <td className="p-3 text-right tabular-nums">
+                      {formatCLP(o.grandTotal)}
+                    </td>
+                    <td className="p-3 text-right">
+                      <Link
+                        href={`/admin/pedidos/${o.id}`}
+                        className="text-brand text-sm font-medium hover:underline"
+                      >
+                        Gestionar
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {result.pages > 1 && (

@@ -213,6 +213,7 @@ export default async function AdminOrderDetailPage({
           shippingLabelUrl: order.shippingLabelUrl ?? "",
           grandTotal: order.grandTotal,
           shippingTotal: order.shippingTotal,
+          fulfillmentMethod: order.fulfillmentMethod,
           refundedTotal: order.payments.reduce(
             (total, payment) =>
               payment.status === "REFUNDED" && (payment.amountPaid ?? 0) < 0

@@ -56,6 +56,7 @@ type Order = {
   shippingLabelUrl: string;
   grandTotal: number;
   shippingTotal: number;
+  fulfillmentMethod: "PICKUP" | "SHIPPING";
   refundedTotal: number;
   hasPersonalizedItems: boolean;
   documents: {
@@ -183,6 +184,26 @@ export function OrderActions({ order }: { order: Order }) {
   });
 
   const options = NEXT_STATUS[order.status] ?? [];
+  const recommendedStatus =
+    order.status === "PAID"
+      ? "PREPARING"
+      : order.status === "PREPARING"
+        ? order.fulfillmentMethod === "PICKUP"
+          ? "READY_FOR_PICKUP"
+          : "SHIPPED"
+        : order.status === "READY_FOR_PICKUP" || order.status === "SHIPPED"
+          ? "DELIVERED"
+          : "";
+  const recommendedAction =
+    recommendedStatus === "PREPARING"
+      ? "Comenzar a preparar"
+      : recommendedStatus === "READY_FOR_PICKUP"
+        ? "Marcar listo para retirar"
+        : recommendedStatus === "SHIPPED"
+          ? "Marcar como despachado"
+          : recommendedStatus === "DELIVERED"
+            ? "Marcar como entregado"
+            : "";
   const canCancel =
     order.status !== "CANCELLED" && order.status !== "DELIVERED";
   const isUnpaidPending =
@@ -208,9 +229,32 @@ export function OrderActions({ order }: { order: Order }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Gestión</CardTitle>
+        <CardTitle>Gestionar pedido</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
+        {recommendedStatus && (
+          <div className="border-brand/30 bg-brand/5 rounded-xl border p-4">
+            <p className="text-foreground-muted text-xs font-medium tracking-wide uppercase">
+              Siguiente paso
+            </p>
+            <p className="mt-1 font-semibold">{recommendedAction}</p>
+            <p className="text-foreground-muted mt-1 text-sm">
+              Estado actual: {labelFor(ORDER_STATUS_LABELS, order.status)}.
+            </p>
+            <Button
+              className="mt-3 w-full sm:w-auto"
+              disabled={changeStatus.isPending}
+              onClick={() =>
+                changeStatus.run({
+                  orderId: order.id,
+                  toStatus: recommendedStatus,
+                })
+              }
+            >
+              {recommendedAction}
+            </Button>
+          </div>
+        )}
         {order.shippingRateId.startsWith("envia:") &&
           order.paymentStatus === "PAID" && (
             <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
@@ -413,14 +457,14 @@ export function OrderActions({ order }: { order: Order }) {
           </div>
         )}
 
-        {options.length > 0 && (
+        {options.length > 1 && (
           <div className="border-border rounded-md border p-3">
             <p className="mb-2 text-sm font-medium">
               Cambiar estado del pedido
             </p>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="grid gap-2 sm:grid-cols-[14rem_1fr_auto] sm:items-center">
               <Select
-                className="max-w-[14rem]"
+                className="w-full"
                 value={toStatus}
                 onChange={(e) => setToStatus(e.target.value)}
               >
@@ -432,7 +476,7 @@ export function OrderActions({ order }: { order: Order }) {
                 ))}
               </Select>
               <Input
-                className="max-w-xs"
+                className="w-full"
                 placeholder="Nota (opcional)"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}

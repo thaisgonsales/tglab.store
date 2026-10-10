@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import { AdminMobileNav } from "@/components/admin/admin-mobile-nav";
 import { AdminUserMenu } from "@/components/admin/admin-user-menu";
 import { BrandLogo } from "@/components/store/brand-logo";
 import { getSettingsGroup } from "@/server/services/settings-service";
@@ -37,11 +38,18 @@ export default async function AdminAppLayout({
         />
       </header>
 
-      <details className="border-b md:hidden"><summary className="cursor-pointer px-4 py-3 text-sm">{account.admin}</summary><AdminSidebar owner={session.user.role === "owner"} labels={account} /></details>
+      <AdminMobileNav
+        owner={session.user.role === "owner"}
+        labels={account}
+        menuLabel={account.admin}
+      />
       <div className="mx-auto flex max-w-7xl">
         <aside className="border-border hidden w-56 shrink-0 border-r md:block print:!hidden">
           <div className="sticky top-16">
-            <AdminSidebar owner={session.user.role === "owner"} labels={account} />
+            <AdminSidebar
+              owner={session.user.role === "owner"}
+              labels={account}
+            />
           </div>
         </aside>
         <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>

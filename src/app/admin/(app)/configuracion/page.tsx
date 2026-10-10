@@ -10,10 +10,10 @@ export default async function AdminSettingsPage() {
   const payments = paymentMethodsStatus();
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto max-w-4xl">
       <PageHeader
         title="Configuración"
-        description="Marca, contacto, retiro, despacho y datos para transferencia."
+        description="Elige una sección, realiza los cambios y guárdala."
       />
       <SettingsForms settings={settings} paymentMethods={payments} />
     </div>

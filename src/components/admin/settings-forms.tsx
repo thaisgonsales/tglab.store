@@ -20,14 +20,98 @@ export function SettingsForms({
   settings: Settings;
   paymentMethods: PaymentMethodInfo[];
 }) {
+  const sections = [
+    {
+      id: "brand",
+      label: "Marca y apariencia",
+      help: "Logo, colores y nombre de la tienda",
+    },
+    {
+      id: "home",
+      label: "Página de inicio",
+      help: "Portada, beneficios y videos",
+    },
+    { id: "contact", label: "Contacto", help: "WhatsApp, redes y ubicación" },
+    {
+      id: "commerce",
+      label: "Ventas y entrega",
+      help: "Retiro, stock y transferencia",
+    },
+    { id: "legal", label: "Datos legales", help: "Razón social y RUT" },
+    {
+      id: "payments",
+      label: "Medios de pago",
+      help: "Estado de las integraciones",
+    },
+  ] as const;
+  const [activeSection, setActiveSection] =
+    useState<(typeof sections)[number]["id"]>("brand");
+
   return (
-    <div className="space-y-6">
-      <BrandForm value={settings.brand} />
-      <HomeForm value={settings.home} />
-      <ContactForm value={settings.contact} />
-      <CommerceForm value={settings.commerce} />
-      <LegalForm value={settings.legal} />
-      <PaymentStatusCard methods={paymentMethods} />
+    <div className="space-y-4">
+      <div className="border-border bg-surface rounded-xl border p-3">
+        <Label htmlFor="settings-section" className="mb-2 block md:hidden">
+          ¿Qué quieres configurar?
+        </Label>
+        <select
+          id="settings-section"
+          value={activeSection}
+          onChange={(event) =>
+            setActiveSection(event.target.value as typeof activeSection)
+          }
+          className="border-border bg-background h-12 w-full rounded-lg border px-3 text-base md:hidden"
+        >
+          {sections.map((section) => (
+            <option key={section.id} value={section.id}>
+              {section.label}
+            </option>
+          ))}
+        </select>
+        <div className="hidden grid-cols-2 gap-2 md:grid lg:grid-cols-3">
+          {sections.map((section) => (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() => setActiveSection(section.id)}
+              className={`rounded-lg border p-3 text-left transition-colors ${
+                activeSection === section.id
+                  ? "border-brand bg-brand/10 text-foreground"
+                  : "border-border hover:bg-surface-muted text-foreground-muted"
+              }`}
+            >
+              <span className="block text-sm font-semibold">
+                {section.label}
+              </span>
+              <span className="mt-0.5 block text-xs">{section.help}</span>
+            </button>
+          ))}
+        </div>
+        <p className="text-foreground-muted mt-2 text-xs md:hidden">
+          {sections.find((section) => section.id === activeSection)?.help}
+        </p>
+      </div>
+
+      <p className="text-foreground-muted px-1 text-sm">
+        Cada sección se guarda por separado con el botón que aparece al final.
+      </p>
+      <section hidden={activeSection !== "brand"}>
+        <BrandForm value={settings.brand} />
+      </section>
+      <section hidden={activeSection !== "home"}>
+        <HomeForm value={settings.home} />
+      </section>
+      <section hidden={activeSection !== "contact"}>
+        <ContactForm value={settings.contact} />
+      </section>
+      <section hidden={activeSection !== "commerce"}>
+        <CommerceForm value={settings.commerce} />
+      </section>
+      <section hidden={activeSection !== "legal"}>
+        <LegalForm value={settings.legal} />
+      </section>
+      <section hidden={activeSection !== "payments"}>
+        <PaymentStatusCard methods={paymentMethods} />
+      </section>
     </div>
   );
 }

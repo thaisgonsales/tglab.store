@@ -46,9 +46,9 @@ export function OrderFilters() {
   }
 
   return (
-    <div className="mb-4 flex flex-wrap gap-2">
+    <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap">
       <form
-        className="flex-1 basis-56"
+        className="sm:col-span-2 lg:flex-1 lg:basis-56"
         onSubmit={(e) => {
           e.preventDefault();
           setParam({ q });
@@ -61,7 +61,7 @@ export function OrderFilters() {
         />
       </form>
       <Select
-        className="max-w-[11rem]"
+        className="w-full lg:max-w-[11rem]"
         value={params.get("estado") ?? ""}
         onChange={(e) => setParam({ estado: e.target.value })}
       >
@@ -73,7 +73,7 @@ export function OrderFilters() {
         ))}
       </Select>
       <Select
-        className="max-w-[11rem]"
+        className="w-full lg:max-w-[11rem]"
         value={params.get("pago") ?? ""}
         onChange={(e) => setParam({ pago: e.target.value })}
       >
@@ -85,7 +85,7 @@ export function OrderFilters() {
         ))}
       </Select>
       <Select
-        className="max-w-[9rem]"
+        className="w-full sm:col-span-2 lg:max-w-[9rem]"
         value={params.get("entrega") ?? ""}
         onChange={(e) => setParam({ entrega: e.target.value })}
       >
