@@ -14,6 +14,7 @@ import { useAction } from "@/lib/use-action";
 import { confirmBankTransfer } from "@/server/actions/payment-actions";
 import {
   cancelOrder,
+  cancelUnpaidOrder,
   changeOrderStatus,
   markOrderRefunded,
   recordResolutionRequest,
@@ -149,6 +150,10 @@ export function OrderActions({ order }: { order: Order }) {
     successMessage: "Pedido cancelado",
     onSuccess: () => router.refresh(),
   });
+  const cancelUnpaid = useAction(cancelUnpaidOrder, {
+    successMessage: "Pedido pendiente cancelado y stock liberado",
+    onSuccess: () => router.refresh(),
+  });
   const doRefund = useAction(markOrderRefunded, {
     successMessage: "Reembolso registrado",
     onSuccess: () => router.refresh(),
@@ -173,6 +178,8 @@ export function OrderActions({ order }: { order: Order }) {
   const options = NEXT_STATUS[order.status] ?? [];
   const canCancel =
     order.status !== "CANCELLED" && order.status !== "DELIVERED";
+  const isUnpaidPending =
+    order.status === "PENDING_PAYMENT" && order.paymentStatus !== "PAID";
   const refundableTotal = Math.max(0, order.grandTotal - order.refundedTotal);
   const canRefund = order.paymentStatus === "PAID" && refundableTotal > 0;
   const refundAmount = Number(refund.amount);
@@ -821,17 +828,28 @@ export function OrderActions({ order }: { order: Order }) {
               />
               <ConfirmDialog
                 title="Cancelar pedido"
-                description="Se notifica al cliente por email con el motivo indicado."
+                description={
+                  isUnpaidPending
+                    ? "El pedido no pagado se cancelará y su reserva de stock quedará liberada. No se enviará correo."
+                    : "Se notifica al cliente por email con el motivo indicado."
+                }
                 confirmLabel="Cancelar pedido"
                 destructive
-                onConfirm={() =>
-                  cancel.run({
+                onConfirm={() => {
+                  if (isUnpaidPending) {
+                    return cancelUnpaid.run({
+                      orderId: order.id,
+                      reason: cancelReason.trim(),
+                      ownerConfirmation: cancelConfirmation,
+                    });
+                  }
+                  return cancel.run({
                     orderId: order.id,
                     requestId: approvedCancellation!.id,
                     reason: cancelReason.trim(),
                     ownerConfirmation: cancelConfirmation,
-                  })
-                }
+                  });
+                }}
                 trigger={
                   <Button
                     size="sm"
@@ -839,9 +857,10 @@ export function OrderActions({ order }: { order: Order }) {
                     disabled={
                       cancelReason.trim().length < 3 ||
                       cancel.isPending ||
+                      cancelUnpaid.isPending ||
                       cancelConfirmation.trim().toUpperCase() !==
                         order.number.toUpperCase() ||
-                      !approvedCancellation
+                      (!isUnpaidPending && !approvedCancellation)
                     }
                   >
                     Cancelar pedido

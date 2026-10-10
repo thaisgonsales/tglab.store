@@ -43,6 +43,16 @@ const PAYMENT_LABEL: Record<string, string> = {
   EXPIRED: "Vencido",
 };
 
+const ORDER_LABEL: Record<string, string> = {
+  PENDING_PAYMENT: "Pendiente de pago",
+  PAID: "Pagado",
+  PREPARING: "En preparación",
+  READY_FOR_PICKUP: "Listo para retiro",
+  SHIPPED: "Despachado",
+  DELIVERED: "Entregado",
+  CANCELLED: "Cancelado",
+};
+
 export default async function AdminOrdersPage({
   searchParams,
 }: {
@@ -93,6 +103,7 @@ export default async function AdminOrdersPage({
                 <th className="p-3">Pago</th>
                 <th className="p-3">Fecha</th>
                 <th className="p-3 text-right">Total</th>
+                <th className="p-3" />
               </tr>
             </thead>
             <tbody>
@@ -117,7 +128,7 @@ export default async function AdminOrdersPage({
                     </span>
                   </td>
                   <td className="p-3">
-                    <Badge variant="outline">{o.status}</Badge>
+                    <Badge variant="outline">{ORDER_LABEL[o.status]}</Badge>
                   </td>
                   <td className="p-3">
                     <Badge
@@ -137,6 +148,14 @@ export default async function AdminOrdersPage({
                   </td>
                   <td className="p-3 text-right tabular-nums">
                     {formatCLP(o.grandTotal)}
+                  </td>
+                  <td className="p-3 text-right">
+                    <Link
+                      href={`/admin/pedidos/${o.id}`}
+                      className="text-brand text-sm font-medium hover:underline"
+                    >
+                      Gestionar
+                    </Link>
                   </td>
                 </tr>
               ))}

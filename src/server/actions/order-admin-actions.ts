@@ -92,6 +92,68 @@ export async function changeOrderStatus(
   });
 }
 
+const cancelUnpaidSchema = z.object({
+  orderId: z.string().cuid(),
+  reason: z.string().trim().min(3, "Indica un motivo").max(500),
+  ownerConfirmation: z.string().trim().min(1),
+});
+
+/** Limpieza manual de un pedido que nunca recibió pago. */
+export async function cancelUnpaidOrder(
+  input: z.input<typeof cancelUnpaidSchema>,
+) {
+  return ownerAction(async (session) => {
+    const data = cancelUnpaidSchema.parse(input);
+    const order = await db.order.findUnique({ where: { id: data.orderId } });
+    if (!order) throw new ActionError("Pedido no encontrado.");
+    if (order.status !== "PENDING_PAYMENT" || order.paymentStatus === "PAID") {
+      throw new ActionError(
+        "Esta acción directa solo sirve para pedidos pendientes sin pago.",
+      );
+    }
+    if (data.ownerConfirmation.toUpperCase() !== order.number.toUpperCase()) {
+      throw new ActionError(
+        `Escribe ${order.number} para confirmar personalmente la cancelación.`,
+      );
+    }
+
+    await db.$transaction(async (tx) => {
+      await releaseReservations(tx, order.id, `Cancelado: ${data.reason}`);
+      await releaseCouponUse(tx, order.id);
+      await tx.payment.updateMany({
+        where: { orderId: order.id, status: { in: ["INITIATED", "PENDING"] } },
+        data: { status: "CANCELLED" },
+      });
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: "CANCELLED",
+          paymentStatus: "CANCELLED",
+          internalNotes: [
+            order.internalNotes,
+            `Cancelado manualmente (${new Date().toISOString()}): ${data.reason}`,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        },
+      });
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: order.id,
+          fromStatus: order.status,
+          toStatus: "CANCELLED",
+          note: `Pedido sin pago cancelado manualmente. Motivo: ${data.reason}`,
+          adminUserId: session.user.id,
+        },
+      });
+    });
+
+    revalidatePath("/admin/pedidos");
+    revalidatePath(`/admin/pedidos/${order.id}`);
+    return null;
+  });
+}
+
 const cancelSchema = z.object({
   orderId: z.string().cuid(),
   requestId: z.string().cuid(),
