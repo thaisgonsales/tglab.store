@@ -5,6 +5,11 @@ import { useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import {
+  labelFor,
+  ORDER_STATUS_LABELS,
+  PAYMENT_STATUS_LABELS,
+} from "@/lib/order-labels";
 
 const ORDER_STATUS = [
   "PENDING_PAYMENT",
@@ -63,7 +68,7 @@ export function OrderFilters() {
         <option value="">Estado del pedido</option>
         {ORDER_STATUS.map((s) => (
           <option key={s} value={s}>
-            {s}
+            {labelFor(ORDER_STATUS_LABELS, s)}
           </option>
         ))}
       </Select>
@@ -75,7 +80,7 @@ export function OrderFilters() {
         <option value="">Estado del pago</option>
         {PAYMENT_STATUS.map((s) => (
           <option key={s} value={s}>
-            {s}
+            {labelFor(PAYMENT_STATUS_LABELS, s)}
           </option>
         ))}
       </Select>

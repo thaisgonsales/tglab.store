@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCLP } from "@/lib/money";
 import { formatDateTime } from "@/lib/datetime";
+import { labelFor, ORDER_STATUS_LABELS } from "@/lib/order-labels";
 import { getDashboardMetrics } from "@/server/services/dashboard-service";
 
 export default async function AdminDashboardPage() {
@@ -73,7 +74,9 @@ export default async function AdminDashboardPage() {
                       </td>
                       <td className="py-2 pr-4">{o.customerName || "—"}</td>
                       <td className="py-2 pr-4">
-                        <Badge variant="outline">{o.status}</Badge>
+                        <Badge variant="outline">
+                          {labelFor(ORDER_STATUS_LABELS, o.status)}
+                        </Badge>
                       </td>
                       <td className="text-foreground-muted py-2 pr-4">
                         {formatDateTime(o.createdAt)}

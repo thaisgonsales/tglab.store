@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCLP } from "@/lib/money";
+import { labelFor, ORDER_STATUS_LABELS } from "@/lib/order-labels";
 import { cn } from "@/lib/utils";
 import {
   lookupOrderTracking,
@@ -77,7 +78,7 @@ export function OrderTracking({ defaultNumber }: { defaultNumber?: string }) {
               </p>
             </div>
             <span className="bg-surface-muted rounded-full px-3 py-1 text-sm">
-              {view.status}
+              {labelFor(ORDER_STATUS_LABELS, view.status)}
             </span>
           </div>
 

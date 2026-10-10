@@ -114,12 +114,9 @@ export function CheckoutForm({
   const rateId = watch("shippingRateId");
   const couponCode = watch("couponCode");
   const emailValue = watch("email");
-  const firstName = watch("firstName");
-  const lastName = watch("lastName");
   const phone = watch("phone");
   const street = watch("street");
   const number = watch("number");
-  const addressNotes = watch("addressNotes");
   const acceptedPersonalizedTerms = watch("acceptedPersonalizedTerms");
   const quoteKey = JSON.stringify([
     method,
@@ -127,13 +124,10 @@ export function CheckoutForm({
     comuna,
     rateId,
     couponCode,
-    emailValue,
-    firstName,
-    lastName,
+    couponCode ? emailValue : "",
     phone,
     street,
     number,
-    addressNotes,
   ]);
   const shippingQuotePending =
     method === "SHIPPING" &&
@@ -162,13 +156,11 @@ export function CheckoutForm({
         comuna: method === "SHIPPING" ? comuna : undefined,
         shippingRateId: rateId || undefined,
         couponCode: couponCode || undefined,
-        customerEmail: emailValue?.includes("@") ? emailValue : undefined,
-        customerName:
-          `${firstName ?? ""} ${lastName ?? ""}`.trim() || undefined,
+        customerEmail:
+          couponCode && emailValue?.includes("@") ? emailValue : undefined,
         customerPhone: phone || undefined,
         street: street || undefined,
         number: number || undefined,
-        addressNotes: addressNotes || undefined,
       });
       if (!cancelled) {
         if (res.ok) {
@@ -192,12 +184,9 @@ export function CheckoutForm({
     rateId,
     couponCode,
     emailValue,
-    firstName,
-    lastName,
     phone,
     street,
     number,
-    addressNotes,
     quoteKey,
   ]);
 

@@ -8,6 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCLP } from "@/lib/money";
 import { formatDateTime } from "@/lib/datetime";
+import {
+  DOCUMENT_STATUS_LABELS,
+  DOCUMENT_TYPE_LABELS,
+  labelFor,
+  ORDER_STATUS_LABELS,
+  PAYMENT_PROVIDER_LABELS,
+  PAYMENT_STATUS_LABELS,
+} from "@/lib/order-labels";
 import { getAdminOrder } from "@/server/services/admin-order-service";
 
 export const dynamic = "force-dynamic";
@@ -31,11 +39,13 @@ export default async function AdminOrderDetailPage({
         description={`${formatDateTime(order.createdAt)} · ${order.fulfillmentMethod === "PICKUP" ? "Retiro" : "Despacho"}`}
         action={
           <>
-            <Badge variant="outline">{order.status}</Badge>
+            <Badge variant="outline">
+              {labelFor(ORDER_STATUS_LABELS, order.status)}
+            </Badge>
             <Badge
               variant={order.paymentStatus === "PAID" ? "success" : "warning"}
             >
-              {order.paymentStatus}
+              {labelFor(PAYMENT_STATUS_LABELS, order.paymentStatus)}
             </Badge>
             <Button asChild variant="outline" size="sm">
               <Link
@@ -242,8 +252,10 @@ export default async function AdminOrderDetailPage({
                   {formatDateTime(h.createdAt)}
                 </span>
                 <span>
-                  {h.fromStatus ? `${h.fromStatus} → ` : ""}
-                  <strong>{h.toStatus}</strong>
+                  {h.fromStatus
+                    ? `${labelFor(ORDER_STATUS_LABELS, h.fromStatus)} → `
+                    : ""}
+                  <strong>{labelFor(ORDER_STATUS_LABELS, h.toStatus)}</strong>
                   {h.note && (
                     <span className="text-foreground-muted"> · {h.note}</span>
                   )}
@@ -266,7 +278,9 @@ export default async function AdminOrderDetailPage({
               <ul className="space-y-1 text-sm">
                 {order.payments.map((p) => (
                   <li key={p.id}>
-                    {p.provider} · {p.status} · {formatCLP(p.amount)}
+                    {labelFor(PAYMENT_PROVIDER_LABELS, p.provider)} ·{" "}
+                    {labelFor(PAYMENT_STATUS_LABELS, p.status)} ·{" "}
+                    {formatCLP(p.amount)}
                     {p.providerReference && (
                       <span className="text-foreground-muted">
                         {" "}
@@ -286,7 +300,8 @@ export default async function AdminOrderDetailPage({
               </p>
               {order.documents.map((d) => (
                 <p key={d.id}>
-                  {d.type}: {d.status}
+                  {labelFor(DOCUMENT_TYPE_LABELS, d.type)}:{" "}
+                  {labelFor(DOCUMENT_STATUS_LABELS, d.status)}
                   {d.folio ? ` · folio ${d.folio}` : ""}
                   {d.amount ? ` · ${formatCLP(d.amount)}` : ""}
                 </p>

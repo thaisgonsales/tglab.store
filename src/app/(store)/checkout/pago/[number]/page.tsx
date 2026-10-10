@@ -7,6 +7,7 @@ import { PaymentMethods } from "@/components/store/payment-methods";
 import { PurchaseTracker } from "@/components/store/purchase-tracker";
 import { formatCLP } from "@/lib/money";
 import { formatDateTime } from "@/lib/datetime";
+import { labelFor, PAYMENT_STATUS_LABELS } from "@/lib/order-labels";
 import { availablePaymentMethods } from "@/server/payments/registry";
 import { canAccessOrder } from "@/server/services/order-access-service";
 import { getOrderByNumber } from "@/server/services/order-service";
@@ -79,13 +80,7 @@ export default async function PaymentPage({
           </div>
           <div className="flex justify-between">
             <dt className="text-foreground-muted">Estado del pago</dt>
-            <dd>
-              {order.paymentStatus === "PAID"
-                ? "Pagado"
-                : order.paymentStatus === "PENDING"
-                  ? "Pendiente"
-                  : order.paymentStatus}
-            </dd>
+            <dd>{labelFor(PAYMENT_STATUS_LABELS, order.paymentStatus)}</dd>
           </div>
         </dl>
 

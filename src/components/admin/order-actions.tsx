@@ -11,6 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAction } from "@/lib/use-action";
+import {
+  CHANNEL_LABELS,
+  labelFor,
+  ORDER_STATUS_LABELS,
+  REQUEST_STATUS_LABELS,
+  REQUEST_TYPE_LABELS,
+} from "@/lib/order-labels";
 import { confirmBankTransfer } from "@/server/actions/payment-actions";
 import {
   cancelOrder,
@@ -313,7 +320,9 @@ export function OrderActions({ order }: { order: Order }) {
                 className="bg-surface-muted rounded p-2 text-xs"
               >
                 <p className="font-medium">
-                  {request.type} · {request.status} · {request.channel}
+                  {labelFor(REQUEST_TYPE_LABELS, request.type)} ·{" "}
+                  {labelFor(REQUEST_STATUS_LABELS, request.status)} ·{" "}
+                  {labelFor(CHANNEL_LABELS, request.channel)}
                 </p>
                 <p>{request.reason}</p>
                 {request.status === "PENDING" && (
@@ -418,7 +427,7 @@ export function OrderActions({ order }: { order: Order }) {
                 <option value="">Selecciona…</option>
                 {options.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {labelFor(ORDER_STATUS_LABELS, s)}
                   </option>
                 ))}
               </Select>
