@@ -114,9 +114,6 @@ export function CheckoutForm({
   const rateId = watch("shippingRateId");
   const couponCode = watch("couponCode");
   const emailValue = watch("email");
-  const phone = watch("phone");
-  const street = watch("street");
-  const number = watch("number");
   const acceptedPersonalizedTerms = watch("acceptedPersonalizedTerms");
   const quoteKey = JSON.stringify([
     method,
@@ -125,9 +122,6 @@ export function CheckoutForm({
     rateId,
     couponCode,
     couponCode ? emailValue : "",
-    phone,
-    street,
-    number,
   ]);
   const shippingQuotePending =
     method === "SHIPPING" &&
@@ -158,9 +152,6 @@ export function CheckoutForm({
         couponCode: couponCode || undefined,
         customerEmail:
           couponCode && emailValue?.includes("@") ? emailValue : undefined,
-        customerPhone: phone || undefined,
-        street: street || undefined,
-        number: number || undefined,
       });
       if (!cancelled) {
         if (res.ok) {
@@ -177,18 +168,7 @@ export function CheckoutForm({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [
-    method,
-    region,
-    comuna,
-    rateId,
-    couponCode,
-    emailValue,
-    phone,
-    street,
-    number,
-    quoteKey,
-  ]);
+  }, [method, region, comuna, rateId, couponCode, emailValue, quoteKey]);
 
   async function onSubmit(values: CheckoutFormValues) {
     if (submitting.current) return;
@@ -383,7 +363,7 @@ export function CheckoutForm({
                 ) : shippingQuotePending || quoting ? (
                   <div className="text-foreground-muted mt-3 flex items-center gap-2 text-sm">
                     <Loader2 className="size-4 animate-spin" />
-                    Consultando empresas de transporte y calculando precios…
+                    Preparando las opciones de despacho…
                   </div>
                 ) : quoteError ? (
                   <p className="mt-1 text-sm text-amber-700">
@@ -423,10 +403,19 @@ export function CheckoutForm({
                               {deliveryTypeLabel(opt.deliveryType)} ·{" "}
                               {opt.zoneName}
                             </span>
+                            {opt.description && (
+                              <span className="mt-1 block text-xs text-amber-700">
+                                {opt.description}
+                              </span>
+                            )}
                           </span>
                         </span>
                         <span className="font-medium">
-                          {opt.price === 0 ? "Gratis" : formatCLP(opt.price)}
+                          {opt.paymentTiming === "ON_DELIVERY"
+                            ? "Por pagar"
+                            : opt.price === 0
+                              ? "Gratis"
+                              : formatCLP(opt.price)}
                         </span>
                       </label>
                     ))}
@@ -549,9 +538,11 @@ export function CheckoutForm({
                 : shippingQuotePending || quoting
                   ? "Calculando…"
                   : quote.selectedShipping
-                    ? quote.shippingTotal === 0
-                      ? "Gratis"
-                      : formatCLP(quote.shippingTotal)
+                    ? quote.selectedShipping.paymentTiming === "ON_DELIVERY"
+                      ? "Por pagar al recibir"
+                      : quote.shippingTotal === 0
+                        ? "Gratis"
+                        : formatCLP(quote.shippingTotal)
                     : "Por calcular"
             }
           />

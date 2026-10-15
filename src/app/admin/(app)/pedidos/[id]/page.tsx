@@ -124,7 +124,11 @@ export default async function AdminOrderDetailPage({
             )}
             <Line
               label={`Despacho${order.shippingRateName ? ` · ${order.shippingRateName}` : ""}`}
-              value={formatCLP(order.shippingTotal)}
+              value={
+                order.shippingRateId === "manual:payable"
+                  ? "Por pagar al transportista"
+                  : formatCLP(order.shippingTotal)
+              }
             />
             <div className="border-border flex justify-between border-t pt-1 font-semibold">
               <dt>Total</dt>

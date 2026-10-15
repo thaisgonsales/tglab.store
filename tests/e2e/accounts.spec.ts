@@ -14,7 +14,7 @@ async function chooseLocalDelivery(page: Page) {
   await page.locator('select[name="comuna"]').selectOption("Castro");
   await page.locator('input[name="street"]').fill("Calle de prueba");
   await page.locator('input[name="number"]').fill("123");
-  await page.getByText("Entrega personal TG LAB", { exact: true }).click();
+  await page.getByText("Despacho dentro de Chiloé", { exact: true }).click();
 }
 
 function fixture(action: "prepare" | "cleanup") {

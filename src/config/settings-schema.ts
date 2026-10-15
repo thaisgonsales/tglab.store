@@ -160,6 +160,18 @@ export const commerceSettingsSchema = z.object({
     .min(0)
     .default(DEFAULT_LAST_UNITS_THRESHOLD),
   freeShippingOverSubtotal: z.number().int().min(0).nullable().default(null),
+  chiloeShippingPrice: z.number().int().min(0).default(3500),
+  chiloeShippingLabel: z.string().min(2).default("Despacho dentro de Chiloé"),
+  payableShippingLabel: z
+    .string()
+    .min(2)
+    .default("Envío por pagar al recibir o retirar"),
+  payableShippingDescription: z
+    .string()
+    .min(2)
+    .default(
+      "El despacho no está incluido en este pago. Coordinaremos contigo el transportista y pagarás el envío directamente al recibir o retirar.",
+    ),
   pickupEnabled: z.boolean().default(false),
   pickupInstructions: z
     .string()

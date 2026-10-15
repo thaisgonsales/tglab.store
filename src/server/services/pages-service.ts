@@ -55,7 +55,7 @@ const DEFAULTS: Record<string, { title: string; body: string[] }> = {
       "Después de completar la compra, recibirás una confirmación con los datos del pedido en el correo electrónico que indicaste. Si detectas un error en tu dirección de entrega o en las opciones de personalización, escríbenos lo antes posible.",
       "Si excepcionalmente no podemos cumplir un pedido por falta de disponibilidad u otra causa, te contactaremos para ofrecerte una solución o devolver el dinero pagado, según corresponda.",
       "## 6. Preparación y envíos",
-      "Realizamos envíos dentro de Chile mediante empresas de transporte. El costo y el plazo o rango de entrega disponible se informarán antes de finalizar la compra. Si un producto requiere fabricación, su plazo de preparación es distinto del tiempo de transporte.",
+      "Realizamos envíos dentro de Chile mediante empresas de transporte. Dentro de Chiloé se cobra la tarifa fija informada en el checkout. Para el resto de Chile, el despacho es por pagar directamente al transportista y no forma parte del total cobrado por TG LAB. Si un producto requiere fabricación, su plazo de preparación es distinto del tiempo de transporte.",
       "Una vez despachado el pedido, te entregaremos la información de seguimiento disponible. Si existe un retraso, pérdida o daño durante el transporte, contáctanos para revisar lo ocurrido y gestionar una solución conforme a las condiciones ofrecidas y la normativa aplicable.",
       "## 7. Cambios, devoluciones y garantía",
       "Las condiciones para solicitar una devolución por cambio de opinión, los costos de envío de retorno y el procedimiento de reembolso se encuentran en nuestra [**Política de cambios, devoluciones y reembolsos**](/cambios-devoluciones).",
@@ -141,8 +141,8 @@ const DEFAULTS: Record<string, { title: string; body: string[] }> = {
   despachos: {
     title: "Despachos y retiro",
     body: [
-      "TG LAB realiza despachos únicamente a las zonas habilitadas durante el checkout y ofrece retiro coordinado en Chiloé cuando esa opción se encuentra disponible.",
-      "Antes de pagar, el checkout informa las opciones disponibles para la dirección ingresada y su costo. Si no aparece una alternativa de despacho, significa que todavía no existe cobertura configurada para ese destino.",
+      "TG LAB realiza despachos dentro de Chile y ofrece retiro coordinado en Chiloé cuando esa opción se encuentra disponible.",
+      "Dentro de Chiloé se cobra el valor fijo indicado en el checkout y se paga junto con el pedido. Para las demás comunas, el envío es por pagar: no se suma al total de la tienda y se paga directamente al transportista al recibir o retirar. Coordinaremos contigo la empresa de transporte.",
       "El plazo estimado de fabricación, cuando corresponda, se informa por separado del tiempo de transporte. Una vez despachado, la entrega depende del destino y del transportista seleccionado. TG LAB comunicará los antecedentes de seguimiento disponibles.",
       "Para coordinar un retiro o consultar por una entrega, escribe a tglab.decor@gmail.com o al WhatsApp +56 9 9243 0939 indicando el número de pedido.",
     ],

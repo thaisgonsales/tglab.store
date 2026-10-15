@@ -127,7 +127,12 @@ export default async function OrderPrintPage({
         {order.discountTotal > 0 && (
           <p>Descuento: −{formatCLP(order.discountTotal)}</p>
         )}
-        <p>Despacho: {formatCLP(order.shippingTotal)}</p>
+        <p>
+          Despacho:{" "}
+          {order.shippingRateId === "manual:payable"
+            ? "Por pagar al transportista"
+            : formatCLP(order.shippingTotal)}
+        </p>
         <p className="font-bold">Total: {formatCLP(order.grandTotal)}</p>
       </div>
 

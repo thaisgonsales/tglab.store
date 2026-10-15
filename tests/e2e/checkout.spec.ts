@@ -28,9 +28,31 @@ test("checkout de invitado con entrega local crea un pedido", async ({
 
   await page.getByLabel("Región").selectOption("Región de Los Lagos");
   await page.getByLabel("Comuna").selectOption("Castro");
+  await expect(
+    page.getByText("Despacho dentro de Chiloé", { exact: true }),
+  ).toBeVisible();
+
+  // Fuera de Chiloé, el transporte no se suma al total ni aparece como gratis.
+  await page
+    .getByLabel("Región")
+    .selectOption("Región Metropolitana de Santiago");
+  await page.getByLabel("Comuna").selectOption("Santiago");
+  await expect(
+    page.getByText("Envío por pagar al recibir o retirar", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByText("Envío por pagar al recibir o retirar", { exact: true })
+    .click();
+  await expect(
+    page.getByText("Por pagar al recibir", { exact: true }),
+  ).toBeVisible();
+
+  // Vuelve a Chiloé y completa la compra con la tarifa fija.
+  await page.getByLabel("Región").selectOption("Región de Los Lagos");
+  await page.getByLabel("Comuna").selectOption("Castro");
   await page.getByLabel("Calle").fill("O'Higgins");
   await page.getByLabel("Número").fill("123");
-  await page.getByText("Entrega personal TG LAB", { exact: true }).click();
+  await page.getByText("Despacho dentro de Chiloé", { exact: true }).click();
 
   // Las condiciones son obligatorias y se validan antes de crear el pedido.
   await page.getByRole("button", { name: /Continuar al pago/i }).click();

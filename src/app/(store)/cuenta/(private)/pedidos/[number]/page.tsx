@@ -77,15 +77,20 @@ export default async function Page({
         <dl className="ml-auto max-w-sm space-y-2 text-sm">
           {(
             [
-              [copy.subtotal, order.subtotal],
-              [copy.discount, -order.discountTotal],
-              [copy.shippingCost, order.shippingTotal],
-              [copy.total, order.grandTotal],
+              [copy.subtotal, formatCLP(order.subtotal)],
+              [copy.discount, formatCLP(-order.discountTotal)],
+              [
+                copy.shippingCost,
+                order.shippingRateId === "manual:payable"
+                  ? "Por pagar al transportista"
+                  : formatCLP(order.shippingTotal),
+              ],
+              [copy.total, formatCLP(order.grandTotal)],
             ] as const
           ).map(([label, value]) => (
             <div className="flex justify-between gap-4" key={label}>
               <dt>{label}</dt>
-              <dd className="font-semibold">{formatCLP(value)}</dd>
+              <dd className="text-right font-semibold">{value}</dd>
             </div>
           ))}
         </dl>

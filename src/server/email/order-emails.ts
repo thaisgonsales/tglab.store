@@ -69,6 +69,7 @@ async function buildAndSend(
     subtotal: order.subtotal,
     discountTotal: order.discountTotal,
     shippingTotal: order.shippingTotal,
+    shippingPayable: order.shippingRateId === "manual:payable",
     grandTotal: order.grandTotal,
     fulfillmentMethod: order.fulfillmentMethod,
     shippingDeliveryType: order.shippingDeliveryType,

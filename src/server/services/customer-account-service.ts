@@ -53,7 +53,17 @@ export async function saveCustomerAddress(accountId: string, input: unknown) {
     const total = await tx.address.count({ where: { accountId } });
     if (!id && total >= 20) throw new Error("ADDRESS_LIMIT");
     if (!total) data.isDefault = true;
-    if (!data.isDefault && !await tx.address.count({ where: { accountId, isDefault: true, ...(id ? { id: { not: id } } : {}) } })) data.isDefault = true;
+    if (
+      !data.isDefault &&
+      !(await tx.address.count({
+        where: {
+          accountId,
+          isDefault: true,
+          ...(id ? { id: { not: id } } : {}),
+        },
+      }))
+    )
+      data.isDefault = true;
     if (data.isDefault)
       await tx.address.updateMany({
         where: { accountId },
@@ -134,6 +144,7 @@ export async function getCustomerOrder(accountId: string, input: unknown) {
       subtotal: true,
       discountTotal: true,
       shippingTotal: true,
+      shippingRateId: true,
       grandTotal: true,
       fulfillmentMethod: true,
       shippingAddress: true,

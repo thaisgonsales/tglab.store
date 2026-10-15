@@ -200,13 +200,15 @@ export async function createOrder(
           carrier:
             quote.selectedShipping?.deliveryType === "LOCAL_DELIVERY"
               ? "TG LAB"
-              : quote.selectedShipping
-                ? quote.selectedShipping.rateId.startsWith("envia:")
-                  ? quote.selectedShipping.zoneName
-                  : quote.selectedShipping.rateId.startsWith("chilexpress:")
-                  ? "Chilexpress"
-                  : "Despacho nacional"
-                : null,
+              : quote.selectedShipping?.rateId === "manual:payable"
+                ? "Por coordinar con el cliente"
+                : quote.selectedShipping
+                  ? quote.selectedShipping.rateId.startsWith("envia:")
+                    ? quote.selectedShipping.zoneName
+                    : quote.selectedShipping.rateId.startsWith("chilexpress:")
+                      ? "Chilexpress"
+                      : "Despacho nacional"
+                  : null,
           currency: "CLP",
           subtotal: quote.subtotal,
           discountTotal: quote.discountTotal,

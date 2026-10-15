@@ -586,6 +586,67 @@ function CommerceForm({ value }: { value: Settings["commerce"] }) {
         <CardTitle>Retiro, stock y transferencia</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="border-brand/25 bg-brand/5 rounded-lg border p-4">
+          <p className="text-sm font-semibold">
+            Despachos simples, sin cotizador
+          </p>
+          <p className="text-foreground-muted mt-1 text-xs">
+            En Chiloé se cobra un valor fijo. Para el resto de Chile, el
+            despacho se paga directamente al recibir o retirar y no se suma al
+            pago de la tienda.
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Field label="Valor fijo dentro de Chiloé (CLP)">
+              <Input
+                type="number"
+                min={0}
+                value={state.chiloeShippingPrice}
+                onChange={(event) =>
+                  setState({
+                    ...state,
+                    chiloeShippingPrice: Number(event.target.value) || 0,
+                  })
+                }
+              />
+            </Field>
+            <Field label="Nombre mostrado para Chiloé">
+              <Input
+                value={state.chiloeShippingLabel}
+                onChange={(event) =>
+                  setState({
+                    ...state,
+                    chiloeShippingLabel: event.target.value,
+                  })
+                }
+              />
+            </Field>
+          </div>
+          <div className="mt-4 space-y-4">
+            <Field label="Nombre mostrado para el resto de Chile">
+              <Input
+                value={state.payableShippingLabel}
+                onChange={(event) =>
+                  setState({
+                    ...state,
+                    payableShippingLabel: event.target.value,
+                  })
+                }
+              />
+            </Field>
+            <Field label="Explicación para el cliente">
+              <Textarea
+                rows={3}
+                value={state.payableShippingDescription}
+                onChange={(event) =>
+                  setState({
+                    ...state,
+                    payableShippingDescription: event.target.value,
+                  })
+                }
+              />
+            </Field>
+          </div>
+        </div>
         <div className="border-border flex items-center justify-between rounded-md border p-3">
           <span className="text-sm">Habilitar retiro en tienda</span>
           <Switch

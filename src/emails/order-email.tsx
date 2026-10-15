@@ -35,6 +35,7 @@ export type OrderEmailData = {
   subtotal: number;
   discountTotal: number;
   shippingTotal: number;
+  shippingPayable: boolean;
   grandTotal: number;
   fulfillmentMethod: "SHIPPING" | "PICKUP";
   shippingDeliveryType: "HOME" | "PICKUP_POINT" | "LOCAL_DELIVERY" | null;
@@ -149,7 +150,11 @@ export function OrderEmail(d: OrderEmailData) {
           )}
           <Text style={muted}>
             {d.fulfillmentMethod === "PICKUP" ? "Retiro" : "Despacho"}:{" "}
-            {d.shippingTotal === 0 ? "Gratis" : formatCLP(d.shippingTotal)}
+            {d.shippingPayable
+              ? "Por pagar al transportista"
+              : d.shippingTotal === 0
+                ? "Gratis"
+                : formatCLP(d.shippingTotal)}
           </Text>
           <Text style={{ ...text, fontWeight: "bold" }}>
             Total: {formatCLP(d.grandTotal)}
