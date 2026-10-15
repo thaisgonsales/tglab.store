@@ -20,7 +20,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { label: "Dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
+  { label: "Inicio", href: "/admin", icon: LayoutDashboard, exact: true },
   { label: "Productos", href: "/admin/productos", icon: Package },
   { label: "Categorías", href: "/admin/categorias", icon: FolderTree },
   { label: "Atributos", href: "/admin/atributos", icon: SlidersHorizontal },

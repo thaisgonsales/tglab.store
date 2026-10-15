@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
+import { rateLimit } from "@/lib/rate-limit";
 import { ActionError, staffAction } from "@/server/auth/action-guard";
 import type { ActionResult } from "@/server/auth/action-guard";
 import { db } from "@/server/db";
@@ -33,6 +35,22 @@ export async function startPayment(
   const parsed = startSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos." };
   const { orderNumber, method } = parsed.data;
+
+  const requestHeaders = await headers();
+  const ip =
+    requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    requestHeaders.get("x-real-ip") ??
+    "unknown";
+  const limit = await rateLimit(`payment-start:${ip}`, {
+    limit: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!limit.ok) {
+    return {
+      ok: false,
+      error: "Demasiados intentos de pago. Espera antes de continuar.",
+    };
+  }
 
   const provider = getProvider(method);
   if (!provider || !provider.isConfigured()) {
