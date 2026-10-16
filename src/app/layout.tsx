@@ -31,6 +31,13 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: brand.tagline,
     applicationName: brand.storeName,
+    manifest: "/manifest.webmanifest",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: brand.storeName,
+    },
+    formatDetection: { telephone: false },
     icons: brand.faviconUrl ? { icon: brand.faviconUrl } : undefined,
     openGraph: {
       type: "website",
