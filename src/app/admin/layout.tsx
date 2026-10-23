@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import "./admin.css";
 
 import { getSettingsGroup } from "@/server/services/settings-service";
 
@@ -22,5 +23,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function AdminRootLayout({ children }: { children: ReactNode }) {
-  return children;
+  return <div className="admin-shell contents">{children}</div>;
 }

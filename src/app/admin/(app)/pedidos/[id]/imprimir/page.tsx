@@ -23,10 +23,10 @@ export default async function OrderPrintPage({
   const address = order.shippingAddress as Record<string, string> | null;
 
   return (
-    <div className="mx-auto max-w-lg bg-white p-6 text-sm text-black">
+    <div className="mx-auto max-w-lg bg-white p-3 text-sm [overflow-wrap:anywhere] text-black sm:p-6 print:p-6">
       <PrintTrigger />
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-lg font-bold">{brand.storeName}</span>
         <span className="text-right">
           <span className="block font-semibold">{order.number}</span>
@@ -36,7 +36,7 @@ export default async function OrderPrintPage({
 
       <hr className="my-4 border-gray-300" />
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4 sm:grid-cols-2 print:grid-cols-2">
         <div>
           <p className="font-semibold">Cliente</p>
           <p>

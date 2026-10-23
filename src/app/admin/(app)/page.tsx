@@ -50,45 +50,78 @@ export default async function AdminDashboardPage() {
               No hay pedidos todavía.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-border text-foreground-muted border-b text-left text-xs uppercase">
-                    <th className="py-2 pr-4">Pedido</th>
-                    <th className="py-2 pr-4">Cliente</th>
-                    <th className="py-2 pr-4">Estado</th>
-                    <th className="py-2 pr-4">Fecha</th>
-                    <th className="py-2 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {m.recentOrders.map((o) => (
-                    <tr key={o.id} className="border-border/60 border-b">
-                      <td className="py-2 pr-4 font-medium">
-                        <Link
-                          href={`/admin/pedidos/${o.id}`}
-                          className="hover:text-brand"
-                        >
-                          {o.number}
-                        </Link>
-                      </td>
-                      <td className="py-2 pr-4">{o.customerName || "—"}</td>
-                      <td className="py-2 pr-4">
-                        <Badge variant="outline">
-                          {labelFor(ORDER_STATUS_LABELS, o.status)}
-                        </Badge>
-                      </td>
-                      <td className="text-foreground-muted py-2 pr-4">
-                        {formatDateTime(o.createdAt)}
-                      </td>
-                      <td className="py-2 text-right tabular-nums">
+            <>
+              <ul className="divide-border divide-y md:hidden">
+                {m.recentOrders.map((o) => (
+                  <li
+                    key={o.id}
+                    className="space-y-2 py-4 first:pt-0 last:pb-0"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Link
+                        href={`/admin/pedidos/${o.id}`}
+                        className="hover:text-brand flex min-h-11 min-w-0 items-center font-medium break-all"
+                      >
+                        {o.number}
+                      </Link>
+                      <span className="font-semibold tabular-nums">
                         {formatCLP(o.total)}
-                      </td>
+                      </span>
+                    </div>
+                    <p className="text-sm [overflow-wrap:anywhere]">
+                      {o.customerName || "—"}
+                    </p>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Badge variant="outline">
+                        {labelFor(ORDER_STATUS_LABELS, o.status)}
+                      </Badge>
+                      <span className="text-foreground-muted text-xs">
+                        {formatDateTime(o.createdAt)}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-border text-foreground-muted border-b text-left text-xs uppercase">
+                      <th className="py-2 pr-4">Pedido</th>
+                      <th className="py-2 pr-4">Cliente</th>
+                      <th className="py-2 pr-4">Estado</th>
+                      <th className="py-2 pr-4">Fecha</th>
+                      <th className="py-2 text-right">Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {m.recentOrders.map((o) => (
+                      <tr key={o.id} className="border-border/60 border-b">
+                        <td className="py-2 pr-4 font-medium">
+                          <Link
+                            href={`/admin/pedidos/${o.id}`}
+                            className="hover:text-brand"
+                          >
+                            {o.number}
+                          </Link>
+                        </td>
+                        <td className="py-2 pr-4">{o.customerName || "—"}</td>
+                        <td className="py-2 pr-4">
+                          <Badge variant="outline">
+                            {labelFor(ORDER_STATUS_LABELS, o.status)}
+                          </Badge>
+                        </td>
+                        <td className="text-foreground-muted py-2 pr-4">
+                          {formatDateTime(o.createdAt)}
+                        </td>
+                        <td className="py-2 text-right tabular-nums">
+                          {formatCLP(o.total)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

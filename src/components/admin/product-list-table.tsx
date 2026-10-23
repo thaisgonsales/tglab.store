@@ -73,9 +73,9 @@ export function ProductListTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
+      <div className="grid min-w-0 grid-cols-1 gap-2 sm:flex sm:flex-wrap">
         <form
-          className="flex-1"
+          className="min-w-0 sm:min-w-48 sm:flex-1"
           onSubmit={(e) => {
             e.preventDefault();
             apply({ q });
@@ -83,12 +83,14 @@ export function ProductListTable({
         >
           <Input
             placeholder="Buscar por nombre, SKU o slug…"
+            aria-label="Buscar por nombre, SKU o slug"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
         </form>
         <Select
-          className="max-w-[10rem]"
+          className="w-full sm:max-w-[10rem]"
+          aria-label="Estado"
           value={filters.status}
           onChange={(e) => apply({ status: e.target.value })}
         >
@@ -99,7 +101,8 @@ export function ProductListTable({
           <option value="ARCHIVED">Archivados</option>
         </Select>
         <Select
-          className="max-w-[12rem]"
+          className="w-full sm:max-w-[12rem]"
+          aria-label="Categoría"
           value={filters.categoria}
           onChange={(e) => apply({ categoria: e.target.value })}
         >
@@ -118,9 +121,9 @@ export function ProductListTable({
           No hay productos que coincidan.
         </p>
       ) : (
-        <div className="rounded-card border-border overflow-x-auto border">
-          <table className="w-full text-sm">
-            <thead>
+        <div className="rounded-card border-border overflow-hidden border md:overflow-x-auto">
+          <table role="table" className="block w-full text-sm md:table">
+            <thead className="sr-only md:not-sr-only md:table-header-group">
               <tr className="border-border bg-surface-muted text-foreground-muted border-b text-left text-xs uppercase">
                 <th className="p-3">Producto</th>
                 <th className="p-3">Estado</th>
@@ -129,7 +132,7 @@ export function ProductListTable({
                 <th className="p-3" />
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup" className="block md:table-row-group">
               {result.items.map((p) => (
                 <ProductRow key={p.id} product={p} />
               ))}
@@ -176,8 +179,11 @@ function ProductRow({ product }: { product: Item }) {
   });
 
   return (
-    <tr className="border-border border-b last:border-0">
-      <td className="p-3">
+    <tr
+      role="row"
+      className="border-border grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center border-b last:border-0 md:table-row"
+    >
+      <td role="cell" className="col-span-2 min-w-0 p-3 md:table-cell">
         <Link
           href={`/admin/productos/${product.id}`}
           className="flex items-center gap-3"
@@ -193,8 +199,8 @@ function ProductRow({ product }: { product: Item }) {
               />
             )}
           </span>
-          <span className="min-w-0">
-            <span className="hover:text-brand block truncate font-medium">
+          <span className="min-w-0 md:max-w-xs">
+            <span className="hover:text-brand block font-medium break-words md:truncate">
               {product.name}
             </span>
             <span className="text-foreground-muted block truncate text-xs">
@@ -205,7 +211,7 @@ function ProductRow({ product }: { product: Item }) {
           </span>
         </Link>
       </td>
-      <td className="p-3">
+      <td role="cell" className="px-3 pb-3 md:p-3">
         <Badge
           variant={
             archived
@@ -220,9 +226,23 @@ function ProductRow({ product }: { product: Item }) {
           {archived ? "Archivado" : STATUS_LABEL[product.status]}
         </Badge>
       </td>
-      <td className="p-3 tabular-nums">{formatCLP(minPrice)}</td>
-      <td className="p-3 tabular-nums">{stock}</td>
-      <td className="p-3 text-right">
+      <td
+        role="cell"
+        className="col-start-1 row-start-3 px-3 pb-3 tabular-nums md:p-3"
+      >
+        {formatCLP(minPrice)}
+      </td>
+      <td
+        role="cell"
+        className="col-start-1 row-start-4 px-3 pb-3 tabular-nums md:p-3"
+      >
+        <span className="text-foreground-muted mr-2 md:hidden">Stock</span>
+        {stock}
+      </td>
+      <td
+        role="cell"
+        className="col-start-2 row-start-2 row-end-5 p-3 text-right md:p-3"
+      >
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <Button variant="ghost" size="icon" aria-label="Acciones">
@@ -257,9 +277,7 @@ function ProductRow({ product }: { product: Item }) {
                 <Copy className="size-3.5" /> Duplicar
               </MenuItem>
               <DropdownMenu.Separator className="bg-border my-1 h-px" />
-              <MenuItem
-                onSelect={() => archive.run(product.id, !archived)}
-              >
+              <MenuItem onSelect={() => archive.run(product.id, !archived)}>
                 {archived ? "Restaurar" : "Archivar / remover"}
               </MenuItem>
               {!archived && (
@@ -316,7 +334,7 @@ function Pagination({ page, pages }: { page: number; pages: number }) {
     return `${pathname}?${sp.toString()}`;
   };
   return (
-    <div className="flex items-center justify-center gap-2 text-sm">
+    <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
       <Button asChild variant="outline" size="sm" disabled={page <= 1}>
         <Link href={href(Math.max(1, page - 1))}>Anterior</Link>
       </Button>

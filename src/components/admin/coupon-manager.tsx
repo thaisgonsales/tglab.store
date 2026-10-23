@@ -1,6 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
+import { AdminDialogContent } from "@/components/admin/admin-dialog-content";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -96,9 +97,9 @@ export function CouponManager({
               key={c.id}
               className="rounded-card border-border bg-surface flex flex-wrap items-center justify-between gap-3 border p-4"
             >
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm font-semibold">
+              <div className="max-w-full min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-sm font-semibold break-all">
                     {c.code}
                   </span>
                   <Badge variant="outline">{TYPE_LABEL[c.type]}</Badge>
@@ -221,7 +222,7 @@ function CouponDialog({
       <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-        <Dialog.Content className="rounded-card border-border bg-surface fixed top-1/2 left-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto border p-6 shadow-lg">
+        <AdminDialogContent className="rounded-card border-border bg-surface fixed top-1/2 left-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 overflow-y-auto border p-6 shadow-lg md:-translate-y-1/2">
           <Dialog.Title className="text-base font-semibold">
             {isEdit ? "Editar cupón" : "Nuevo cupón"}
           </Dialog.Title>
@@ -359,7 +360,7 @@ function CouponDialog({
               </Button>
             </div>
           </div>
-        </Dialog.Content>
+        </AdminDialogContent>
       </Dialog.Portal>
     </Dialog.Root>
   );

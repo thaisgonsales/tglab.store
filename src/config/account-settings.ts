@@ -2,7 +2,9 @@ import { z } from "zod";
 
 /** Textos de cuentas editables mediante Setting (grupo account). */
 export const accountSettingsSchema = z.object({
-  invalidData: z.string().default("Revisa los datos ingresados y los campos obligatorios."),
+  invalidData: z
+    .string()
+    .default("Revisa los datos ingresados y los campos obligatorios."),
   invalidCode: z.string().default("Ingresa un código de verificación válido."),
   orderStatuses: z
     .object({
@@ -45,6 +47,8 @@ export const accountSettingsSchema = z.object({
   register: z.string().default("Crear cuenta"),
   logout: z.string().default("Cerrar sesión"),
   admin: z.string().default("Administración"),
+  adminOpenMenu: z.string().default("Abrir menú"),
+  adminCloseMenu: z.string().default("Cerrar menú"),
   customerAccess: z.string().default("Acceso de clientes"),
   adminAccess: z.string().default("Acceso del personal"),
   loginIntro: z

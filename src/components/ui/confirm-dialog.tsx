@@ -43,7 +43,7 @@ export function ConfirmDialog({
       <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-        <Dialog.Content className="rounded-card border-border bg-surface fixed top-1/2 left-1/2 z-50 w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 border p-6 shadow-lg">
+        <Dialog.Content className="rounded-card border-border bg-surface fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain border p-4 shadow-lg sm:p-6">
           <Dialog.Title className="text-base font-semibold">
             {title}
           </Dialog.Title>
@@ -52,7 +52,7 @@ export function ConfirmDialog({
               {description}
             </Dialog.Description>
           )}
-          <div className="mt-6 flex justify-end gap-2">
+          <div className="mt-6 flex flex-wrap justify-end gap-2 [&_button]:min-h-11">
             <Dialog.Close asChild>
               <Button variant="outline" size="sm" disabled={pending}>
                 {cancelLabel}

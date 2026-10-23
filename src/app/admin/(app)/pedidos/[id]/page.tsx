@@ -67,8 +67,8 @@ export default async function AdminOrderDetailPage({
           <ul className="divide-border divide-y">
             {order.items.map((item) => (
               <li key={item.id} className="py-3 text-sm">
-                <div className="flex justify-between gap-2">
-                  <span className="font-medium">
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+                  <span className="min-w-0 font-medium break-words">
                     {item.productName}
                     {item.variantLabel && (
                       <span className="text-foreground-muted">
@@ -82,7 +82,7 @@ export default async function AdminOrderDetailPage({
                       </Badge>
                     )}
                   </span>
-                  <span className="tabular-nums">
+                  <span className="shrink-0 tabular-nums">
                     {item.quantity} × {formatCLP(item.unitPrice)}
                   </span>
                 </div>
@@ -92,7 +92,7 @@ export default async function AdminOrderDetailPage({
                   </p>
                 )}
                 {item.customizations.length > 0 && (
-                  <ul className="bg-surface-muted mt-1 rounded-md p-2 text-xs">
+                  <ul className="bg-surface-muted mt-1 rounded-md p-2 text-xs [overflow-wrap:anywhere]">
                     {item.customizations.map((c) => (
                       <li key={c.id}>
                         <span className="font-medium">{c.label}:</span>{" "}
@@ -143,7 +143,7 @@ export default async function AdminOrderDetailPage({
           <CardHeader>
             <CardTitle>Cliente</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1 text-sm">
+          <CardContent className="space-y-1 text-sm [overflow-wrap:anywhere]">
             <p>
               {order.firstName} {order.lastName}
             </p>
@@ -159,7 +159,7 @@ export default async function AdminOrderDetailPage({
           <CardHeader>
             <CardTitle>Entrega</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1 text-sm">
+          <CardContent className="space-y-1 text-sm [overflow-wrap:anywhere]">
             {order.fulfillmentMethod === "PICKUP" ? (
               <p>Retiro en tienda</p>
             ) : order.shippingDeliveryType === "PICKUP_POINT" ? (
@@ -347,9 +347,9 @@ export default async function AdminOrderDetailPage({
 
 function Line({ label, value }: { label: string; value: string }) {
   return (
-    <div className="text-foreground-muted flex justify-between">
-      <dt>{label}</dt>
-      <dd className="tabular-nums">{value}</dd>
+    <div className="text-foreground-muted flex flex-wrap justify-between gap-x-4 gap-y-1">
+      <dt className="min-w-0 break-words">{label}</dt>
+      <dd className="ml-auto text-right tabular-nums">{value}</dd>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
+import { AdminDialogContent } from "@/components/admin/admin-dialog-content";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { GripVertical, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -82,7 +83,7 @@ export function AttributeFormDialog({
       <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-        <Dialog.Content className="rounded-card border-border bg-surface fixed top-1/2 left-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto border p-6 shadow-lg">
+        <AdminDialogContent className="rounded-card border-border bg-surface fixed top-1/2 left-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 overflow-y-auto border p-6 shadow-lg md:-translate-y-1/2">
           <Dialog.Title className="text-base font-semibold">
             {isEdit ? "Editar atributo" : "Nuevo atributo"}
           </Dialog.Title>
@@ -132,9 +133,13 @@ export function AttributeFormDialog({
               )}
               <ul className="space-y-2">
                 {fields.map((field, index) => (
-                  <li key={field.id} className="flex items-center gap-2">
+                  <li
+                    key={field.id}
+                    className="flex min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap"
+                  >
                     <GripVertical className="text-foreground-muted size-4 shrink-0" />
                     <Input
+                      className="min-w-0 flex-1 basis-32"
                       placeholder="Nombre del valor"
                       {...register(`values.${index}.label`)}
                       aria-invalid={!!errors.values?.[index]?.label}
@@ -173,7 +178,7 @@ export function AttributeFormDialog({
               </Button>
             </div>
           </form>
-        </Dialog.Content>
+        </AdminDialogContent>
       </Dialog.Portal>
     </Dialog.Root>
   );

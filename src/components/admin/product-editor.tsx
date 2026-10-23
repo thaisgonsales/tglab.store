@@ -218,7 +218,7 @@ export function ProductEditor({
       />
 
       <div
-        className="mb-6 grid grid-cols-4 gap-2"
+        className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4"
         aria-label="Progreso del producto"
       >
         {[
@@ -633,7 +633,7 @@ function EditorStep({
   return (
     <section
       id={id}
-      className="rounded-card border-border bg-surface scroll-mt-6 border shadow-[0_8px_24px_rgba(41,39,45,.035)]"
+      className="rounded-card border-border bg-surface min-w-0 scroll-mt-32 border shadow-[0_8px_24px_rgba(41,39,45,.035)] md:scroll-mt-20"
     >
       <div className="border-border flex items-start gap-3 border-b px-5 py-4">
         <span

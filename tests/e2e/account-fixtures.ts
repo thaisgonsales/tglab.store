@@ -5,7 +5,7 @@ import { hashPassword } from "better-auth/crypto";
 import { z } from "zod";
 import { db } from "../../src/server/db";
 
-const input = z.object({ action: z.enum(["prepare", "cleanup"]), scope: z.string().regex(/^e2e-account-[a-f0-9-]{36}$/), password: z.string().min(10) }).parse(JSON.parse(readFileSync(0, "utf8")));
+const input = z.object({ action: z.enum(["prepare", "cleanup"]), scope: z.string().regex(/^e2e-account-[a-f0-9-]{36}$/), password: z.string().min(10), responsive: z.boolean().default(false) }).parse(JSON.parse(readFileSync(0, "utf8")));
 const { scope, password } = input;
 const emails = ["owner", "customer", "staff", "guest"].map((role) => `${scope}-${role}@example.com`);
 async function main() {
@@ -14,6 +14,11 @@ try {
     const id = randomUUID();
     await db.user.create({ data: { id, name: "Owner E2E", email: emails[0]!, role: "owner", emailVerified: true, accounts: { create: { id: randomUUID(), accountId: id, providerId: "credential", password: await hashPassword(password) } } } });
     await db.product.create({ data: { name: "Producto de prueba de cuenta", slug: scope, status: "PUBLISHED", publishedAt: new Date(), variants: { create: { price: 1990, stock: 20 } } } });
+    if (input.responsive) {
+      const attribute = await db.attribute.create({ data: { name: "Tamaño de prueba", slug: scope, values: { create: { label: "Grande", slug: "grande" } } }, include: { values: true } });
+      const value = attribute.values[0]!;
+      await db.product.update({ where: { slug: scope }, data: { type: "VARIABLE", attributes: { create: { attributeId: attribute.id } }, variants: { create: { price: 3990, stock: 12, sku: scope, optionsKey: value.id, attributeValues: { create: { attributeId: attribute.id, attributeValueId: value.id } } } } } });
+    }
   } else {
     await db.order.deleteMany({ where: { email: { in: emails } } });
     await db.customerUser.deleteMany({ where: { email: { in: emails } } });
@@ -21,6 +26,7 @@ try {
     await db.user.deleteMany({ where: { email: { in: emails } } });
     await db.cartItem.deleteMany({ where: { variant: { product: { slug: scope } } } });
     await db.product.deleteMany({ where: { slug: scope } });
+    await db.attribute.deleteMany({ where: { slug: scope } });
   }
 } finally { await db.$disconnect(); }
 }

@@ -86,7 +86,7 @@ export function CategoryManager({
               {root.children && root.children.length > 0 && (
                 <ul className="border-border border-t">
                   {root.children.map((child, ci) => (
-                    <li key={child.id} className="pl-8">
+                    <li key={child.id} className="pl-3 sm:pl-8">
                       <CategoryRow
                         category={child}
                         parents={allOptions}
@@ -132,8 +132,8 @@ function CategoryRow({
   });
 
   return (
-    <div className="flex items-center gap-3 p-3">
-      <div className="flex flex-col">
+    <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 p-3">
+      <div className="row-span-2 flex flex-col sm:row-span-1">
         <button
           type="button"
           aria-label="Subir"
@@ -154,9 +154,11 @@ function CategoryRow({
         </button>
       </div>
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-medium">{category.name}</span>
+      <div className="col-span-3 min-w-0 sm:col-span-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium break-words">
+            {category.name}
+          </span>
           {!category.isActive && <Badge variant="warning">Inactiva</Badge>}
           {nested && <Badge variant="neutral">subcategoría</Badge>}
         </div>
@@ -169,7 +171,12 @@ function CategoryRow({
         category={category}
         parents={parents}
         trigger={
-          <Button variant="ghost" size="icon" aria-label="Editar">
+          <Button
+            className="col-start-3"
+            variant="ghost"
+            size="icon"
+            aria-label="Editar"
+          >
             <Pencil className="size-4" />
           </Button>
         }

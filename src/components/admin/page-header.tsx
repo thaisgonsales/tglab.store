@@ -13,8 +13,8 @@ export function PageHeader({
   backHref?: string;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-      <div>
+    <div className="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row">
+      <div className="min-w-0 break-words">
         {backHref && (
           <Link
             href={backHref}
@@ -28,7 +28,11 @@ export function PageHeader({
           <p className="text-foreground-muted mt-1 text-sm">{description}</p>
         )}
       </div>
-      {action && <div className="flex items-center gap-2">{action}</div>}
+      {action && (
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
+          {action}
+        </div>
+      )}
     </div>
   );
 }

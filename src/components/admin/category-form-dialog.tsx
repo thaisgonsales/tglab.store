@@ -1,6 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
+import { AdminDialogContent } from "@/components/admin/admin-dialog-content";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -85,7 +86,7 @@ export function CategoryFormDialog({
       <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-        <Dialog.Content className="rounded-card border-border bg-surface fixed top-1/2 left-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto border p-6 shadow-lg">
+        <AdminDialogContent className="rounded-card border-border bg-surface fixed top-1/2 left-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 overflow-y-auto border p-6 shadow-lg md:-translate-y-1/2">
           <Dialog.Title className="text-base font-semibold">
             {isEdit ? "Editar categoría" : "Nueva categoría"}
           </Dialog.Title>
@@ -188,7 +189,7 @@ export function CategoryFormDialog({
               </Button>
             </div>
           </form>
-        </Dialog.Content>
+        </AdminDialogContent>
       </Dialog.Portal>
     </Dialog.Root>
   );

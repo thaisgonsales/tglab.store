@@ -420,7 +420,7 @@ export function VariantsSection({
               </div>
             ))}
           </div>
-          <div className="mt-4 flex items-center gap-3">
+          <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <Button
               type="button"
               size="sm"
@@ -442,9 +442,9 @@ export function VariantsSection({
       )}
 
       {variants.length > 0 && (
-        <div className="border-border overflow-x-auto rounded-md border">
-          <table className="w-full text-sm">
-            <thead>
+        <div className="border-border overflow-hidden rounded-md border lg:overflow-x-auto">
+          <table role="table" className="block w-full text-sm lg:table">
+            <thead className="sr-only lg:not-sr-only lg:table-header-group">
               <tr className="border-border bg-surface-muted text-foreground-muted border-b text-left text-xs uppercase">
                 <th className="p-2">Opción</th>
                 <th className="p-2">SKU</th>
@@ -455,7 +455,7 @@ export function VariantsSection({
                 <th className="p-2" />
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup" className="block lg:table-row-group">
               {variants.map((v) => (
                 <VariantEditRow key={v.id} variant={v} />
               ))}
@@ -496,8 +496,11 @@ function VariantEditRow({ variant }: { variant: VariantRow }) {
     isActive !== variant.isActive;
 
   return (
-    <tr className="border-border border-b last:border-0">
-      <td className="p-2">
+    <tr
+      role="row"
+      className="border-border grid min-w-0 grid-cols-1 gap-1 border-b p-3 last:border-0 sm:grid-cols-2 lg:table-row lg:p-0"
+    >
+      <td role="cell" className="min-w-0 p-2 sm:col-span-2">
         <div className="flex flex-wrap items-center gap-1">
           {variant.optionLabels.map((ol) => (
             <Badge key={ol.attribute} variant="outline">
@@ -512,44 +515,82 @@ function VariantEditRow({ variant }: { variant: VariantRow }) {
           ))}
         </div>
       </td>
-      <td className="p-2">
+      <td role="cell" className="min-w-0 p-2">
+        <label
+          htmlFor={`sku-${variant.id}`}
+          className="mb-1 block text-xs lg:sr-only"
+        >
+          SKU
+        </label>
         <Input
-          className="h-8 w-32"
+          id={`sku-${variant.id}`}
+          className="w-full lg:h-8 lg:w-32"
           value={sku}
           onChange={(e) => setSku(e.target.value)}
         />
       </td>
-      <td className="p-2">
+      <td role="cell" className="min-w-0 p-2">
+        <label
+          htmlFor={`price-${variant.id}`}
+          className="mb-1 block text-xs lg:sr-only"
+        >
+          Precio
+        </label>
         <Input
-          className="h-8 w-24"
+          id={`price-${variant.id}`}
+          className="w-full lg:h-8 lg:w-24"
           inputMode="numeric"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
         />
       </td>
-      <td className="p-2">
+      <td role="cell" className="min-w-0 p-2">
+        <label
+          htmlFor={`offer-${variant.id}`}
+          className="mb-1 block text-xs lg:sr-only"
+        >
+          Oferta
+        </label>
         <Input
-          className="h-8 w-24"
+          id={`offer-${variant.id}`}
+          className="w-full lg:h-8 lg:w-24"
           inputMode="numeric"
           placeholder="—"
           value={compareAt}
           onChange={(e) => setCompareAt(e.target.value)}
         />
       </td>
-      <td className="p-2">
+      <td role="cell" className="min-w-0 p-2">
+        <label
+          htmlFor={`stock-${variant.id}`}
+          className="mb-1 block text-xs lg:sr-only"
+        >
+          Stock
+        </label>
         <Input
-          className="h-8 w-20"
+          id={`stock-${variant.id}`}
+          className="w-full lg:h-8 lg:w-20"
           type="number"
           min={0}
           value={stock}
           onChange={(e) => setStock(e.target.value)}
         />
       </td>
-      <td className="p-2">
-        <Switch checked={isActive} onCheckedChange={setIsActive} />
+      <td role="cell" className="p-2">
+        <label
+          htmlFor={`active-${variant.id}`}
+          className="mb-2 block text-xs lg:sr-only"
+        >
+          Activa
+        </label>
+        <Switch
+          id={`active-${variant.id}`}
+          checked={isActive}
+          onCheckedChange={setIsActive}
+        />
       </td>
-      <td className="p-2">
-        <div className="flex items-center gap-1">
+      <td role="cell" className="p-2 sm:col-span-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             size="sm"
